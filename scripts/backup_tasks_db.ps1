@@ -7,9 +7,9 @@ if (Test-Path $rcloneCandidate) {
     $rclone = "rclone"
 }
 
-$source = "C:\Trading\claude_practice\claude_practice\tasks.db"
+$source = "C:\Trading\claude_practice\claude_practice\taskflow\tasks.db"
 $remoteFolder = "gdrivebackup:TasksDBBackup"
-$logDir = "C:\Trading\claude_practice\claude_practice\backup_logs"
+$logDir = "C:\Trading\claude_practice\claude_practice\taskflow\backup_logs"
 $retentionDays = 30
 
 if (-not (Test-Path $logDir)) {

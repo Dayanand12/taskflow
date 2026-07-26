@@ -577,6 +577,8 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 /* ── Meeting modal ────────────────────────────────────────────────────────── */
 #meeting-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center}
 #meeting-overlay.open{display:flex}
+#milestone-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center}
+#milestone-overlay.open{display:flex}
 .meeting-modal{background:var(--surf);border:1px solid var(--border);border-radius:13px;width:100%;max-width:500px;margin:14px;display:flex;flex-direction:column;overflow:hidden;max-height:90vh}
 .mtg-modal-head{padding:16px 18px 0;border-bottom:1px solid var(--border);padding-bottom:12px}
 .mtg-modal-title{font-size:.95rem;font-weight:700;margin-bottom:0;display:flex;align-items:center;gap:8px}
@@ -1018,6 +1020,45 @@ body.sidebar-open #main-wrap{margin-right:252px}
 .dsb-none{font-size:.72rem;color:var(--txt3);padding:10px 12px;font-style:italic}
 .dsb-empty{font-size:.72rem;color:var(--txt3);padding:4px 8px}
 
+/* ── Milestones ─────────────────────────────────────────────────────────── */
+.milestone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px 18px}
+.milestone-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s}
+.milestone-card:hover{border-color:var(--border2)}
+.milestone-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.milestone-title{font-weight:700;font-size:.92rem}
+.milestone-actions{display:flex;gap:2px;flex-shrink:0}
+.milestone-actions button{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:.8rem;padding:2px 5px;border-radius:5px}
+.milestone-actions button:hover{color:var(--txt);background:var(--surf2)}
+.milestone-meta{display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--txt2)}
+.milestone-status-pill{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px}
+.ms-not_started{background:#1e293b;color:#94a3b8}
+.ms-in_progress{background:#0f1e38;color:#60a5fa}
+.ms-completed{background:#061a10;color:#34d399}
+[data-theme="light"] .ms-not_started{background:#f1f5f9}
+[data-theme="light"] .ms-in_progress{background:#eff6ff}
+[data-theme="light"] .ms-completed{background:#ecfdf5}
+.milestone-progress-track{height:6px;border-radius:99px;background:var(--bg);overflow:hidden}
+.milestone-progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
+.milestone-progress-lbl{font-size:.68rem;color:var(--txt3)}
+.milestone-desc{font-size:.74rem;color:var(--txt2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.milestone-add-wrap{padding:0 18px 14px}
+.milestone-empty{padding:40px 18px;text-align:center;color:var(--txt3);font-size:.85rem}
+
+.task-milestone{font-size:.65rem;color:#c084fc;background:#180f2b;padding:1px 6px;border-radius:5px;border:1px solid #a855f733}
+[data-theme="light"] .task-milestone{background:#faf5ff}
+.blocked-badge{font-size:.65rem;color:#f59e0b;background:#1e1608;padding:1px 6px;border-radius:5px;border:1px solid #f59e0b44;display:inline-flex;align-items:center;gap:3px}
+[data-theme="light"] .blocked-badge{background:#fffbeb}
+
+/* ── Dependencies tab (detail panel) ───────────────────────────────────── */
+.dep-section-lbl{font-size:.72rem;font-weight:600;color:var(--txt2);margin:14px 0 6px}
+.dep-section-lbl:first-child{margin-top:0}
+.dep-chip{display:inline-flex;align-items:center;gap:6px;background:var(--surf2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;font-size:.74rem;margin:0 6px 6px 0}
+.dep-chip.blocking{border-color:#f59e0b66}
+.dep-chip button{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:.8rem;padding:0;line-height:1}
+.dep-chip button:hover{color:var(--danger)}
+.dep-add-row{display:flex;gap:6px;margin-top:4px}
+.dep-empty{font-size:.72rem;color:var(--txt3);font-style:italic;margin-bottom:4px}
+
 </style>
 </head>
 <body>
@@ -1027,8 +1068,9 @@ body.sidebar-open #main-wrap{margin-right:252px}
   <div class="logo">Task<span>Flow</span></div>
   <div class="view-tabs">
     <button class="view-tab-primary active" data-v="tasks"     onclick="goToTasks()">Tasks<span class="rem-badge" id="today-badge" style="display:none;background:#ef4444">0</span></button>
-    <button class="view-tab-primary"        data-v="workflows" onclick="switchView('workflows')">⚡ Workflows</button>
-    <button class="view-tab-primary"        data-v="notes"     onclick="switchView('notes')">📓 Notes</button>
+    <button class="view-tab-primary"        data-v="workflows"  onclick="switchView('workflows')">⚡ Workflows</button>
+    <button class="view-tab-primary"        data-v="milestones" onclick="switchView('milestones')">🎯 Milestones</button>
+    <button class="view-tab-primary"        data-v="notes"      onclick="switchView('notes')">📓 Notes</button>
     <span class="nav-divider"></span>
     <button class="view-tab active" data-v="list"      onclick="switchView('list')">≡ List</button>
     <button class="view-tab"        data-v="kanban"    onclick="switchView('kanban')">⊞ Board</button>
@@ -1143,8 +1185,9 @@ body.sidebar-open #main-wrap{margin-right:252px}
   <div id="view-kanban"    style="display:none"></div>
   <div id="view-calendar"  style="display:none" class="view-pad"></div>
   <div id="view-reminders" style="display:none" class="view-pad"></div>
-  <div id="view-workflows" style="display:none" class="view-pad"></div>
-  <div id="view-notes"     style="display:none"></div>
+  <div id="view-workflows"  style="display:none" class="view-pad"></div>
+  <div id="view-milestones" style="display:none" class="view-pad"></div>
+  <div id="view-notes"      style="display:none"></div>
 
 </div><!-- /main-wrap -->
 
@@ -1257,6 +1300,39 @@ body.sidebar-open #main-wrap{margin-right:252px}
   </div>
 </div>
 
+<!-- ── Milestone modal ─────────────────────────────────────────────────────── -->
+<div id="milestone-overlay" onclick="if(event.target===this)closeMilestoneModal()">
+  <div class="meeting-modal">
+    <div class="mtg-modal-head">
+      <div class="mtg-modal-title">🎯 <span id="ms-modal-title-txt">New Milestone</span></div>
+    </div>
+    <div class="mtg-modal-body">
+      <input type="hidden" id="ms-id"/>
+      <label>Title *</label>
+      <input type="text" id="ms-title" class="m-input" placeholder="e.g. Data Layer, Strategy Engine, Live Deployment…"/>
+
+      <div class="mtg-grid2" style="margin-top:4px">
+        <div><label>Target date</label><input type="date" id="ms-target-date" class="m-input"/></div>
+        <div>
+          <label>Status</label>
+          <select id="ms-status" class="m-input">
+            <option value="not_started">Not Started</option>
+            <option value="in_progress">In Progress</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <label>Description</label>
+      <textarea id="ms-desc" class="m-input" rows="3" placeholder="What does this phase cover?" style="resize:vertical"></textarea>
+    </div>
+    <div class="mtg-modal-foot">
+      <button class="btn-danger" id="ms-del-btn" onclick="deleteMilestoneFromModal()" style="display:none">Delete</button>
+      <button class="btn-cancel" onclick="closeMilestoneModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveMilestone()">Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- ── Calendar day popup ──────────────────────────────────────────────────── -->
 <div id="calday-overlay" onclick="if(event.target===this)closeCalDay()">
   <div class="calday-box">
@@ -1287,6 +1363,7 @@ body.sidebar-open #main-wrap{margin-right:252px}
     <button class="ptab active" onclick="switchPTab('details',this)">Details</button>
     <button class="ptab"        onclick="switchPTab('subtasks',this)">Subtasks</button>
     <button class="ptab"        onclick="switchPTab('time',this)">Time</button>
+    <button class="ptab"        onclick="switchPTab('links',this)">Links</button>
     <button class="ptab"        onclick="switchPTab('activity',this)">Activity</button>
   </div>
 
@@ -1342,19 +1419,14 @@ body.sidebar-open #main-wrap{margin-right:252px}
         <input type="text" id="p-project" class="pf-input" placeholder="e.g. Website"/>
       </div>
       <div>
-        <span class="pf-label">Repeat</span>
-        <select id="p-recurrence" class="pf-input">
-          <option value="none">— No repeat</option>
-          <option value="daily">↻ Daily</option>
-          <option value="weekdays">↻ Weekdays (Mon–Fri)</option>
-          <option value="weekly">↻ Weekly</option>
-          <option value="biweekly">↻ Every 2 weeks</option>
-          <option value="monthly">↻ Monthly</option>
+        <span class="pf-label">Milestone</span>
+        <select id="p-milestone" class="pf-input">
+          <option value="">— No milestone —</option>
         </select>
       </div>
     </div>
 
-    <div class="pf-row" style="margin-top:11px">
+    <div class="pf-row3" style="margin-top:11px">
       <div style="flex:1">
         <span class="pf-label">Task Type</span>
         <select id="p-task-type" class="pf-input">
@@ -1363,6 +1435,17 @@ body.sidebar-open #main-wrap{margin-right:252px}
           <option value="project">📁 Project</option>
           <option value="learning">📚 Learning</option>
           <option value="company">🏢 Company</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <span class="pf-label">Repeat</span>
+        <select id="p-recurrence" class="pf-input">
+          <option value="none">— No repeat</option>
+          <option value="daily">↻ Daily</option>
+          <option value="weekdays">↻ Weekdays (Mon–Fri)</option>
+          <option value="weekly">↻ Weekly</option>
+          <option value="biweekly">↻ Every 2 weeks</option>
+          <option value="monthly">↻ Monthly</option>
         </select>
       </div>
       <div style="flex:1">
@@ -1403,6 +1486,18 @@ body.sidebar-open #main-wrap{margin-right:252px}
     </div>
     <div style="font-size:.72rem;font-weight:600;color:var(--txt2);margin-bottom:5px">Sessions</div>
     <div class="te-list" id="p-te-list"></div>
+  </div>
+
+  <!-- Links tab (dependencies) -->
+  <div class="panel-body" id="ptab-links" style="display:none">
+    <div class="dep-section-lbl">Blocked by</div>
+    <div id="p-dep-blocked"></div>
+    <div class="dep-add-row">
+      <select id="p-dep-select" class="pf-input" style="flex:1"></select>
+      <button class="sub-add-btn" onclick="addDependency()">Add</button>
+    </div>
+    <div class="dep-section-lbl">Blocks</div>
+    <div id="p-dep-blocks"></div>
   </div>
 
   <!-- Activity tab -->
@@ -1553,7 +1648,7 @@ body.sidebar-open #main-wrap{margin-right:252px}
 const SL = {not_started:'Not Started',todo:'To Do',in_process:'In Process',hold:'Hold',completed:'Completed',cancelled:'Cancelled'};
 const SC = {not_started:'#6b7280',todo:'#3b82f6',in_process:'#22c55e',hold:'#a855f7',completed:'#10b981',cancelled:'#ef4444'};
 const PO = {high:3,medium:2,low:1};
-const AI = {created:'✨',status_changed:'↔',priority_changed:'▲',title_changed:'✏',subtask_added:'＋',subtask_completed:'✓',subtask_reopened:'↩',timer_started:'▶',timer_stopped:'⏹'};
+const AI = {created:'✨',status_changed:'↔',priority_changed:'▲',title_changed:'✏',subtask_added:'＋',subtask_completed:'✓',subtask_reopened:'↩',timer_started:'▶',timer_stopped:'⏹',dependency_added:'🔗',dependency_removed:'⛓'};
 const TC = {
   quick:   {label:'Quick',    icon:'⚡', color:'#f59e0b'},
   project: {label:'Project',  icon:'📁', color:'#3b82f6'},
@@ -1563,8 +1658,9 @@ const TC = {
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let allTasks=[], allTags=[], allMeetings=[];
+let allTasks=[], allTags=[], allMeetings=[], allMilestones=[];
 let currentFilter='all', currentSort='newest', searchQuery='';
+let currentMilestoneFilter=null;
 let activeTagIds=new Set(), currentView='list';
 let currentTypeFilter='all';
 let groupByProject=false;
@@ -1596,20 +1692,21 @@ let tpCollapsedSteps=new Set();
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function loadAll(){
-  const [tR,gR,mR]=await Promise.all([fetch('/tasks'),fetch('/tags'),fetch('/meetings')]);
-  allTasks=await tR.json(); allTags=await gR.json(); allMeetings=await mR.json();
+  const [tR,gR,mR,msR]=await Promise.all([fetch('/tasks'),fetch('/tags'),fetch('/meetings'),fetch('/milestones')]);
+  allTasks=await tR.json(); allTags=await gR.json(); allMeetings=await mR.json(); allMilestones=await msR.json();
   await loadStandaloneReminders();
   renderAll();
 }
 function renderAll(){
   renderDashboard(); updateCounts(); renderTagBar();
-  if(currentView==='list')      renderList();
-  if(currentView==='kanban')    renderKanban();
-  if(currentView==='calendar')  renderCalendar();
-  if(currentView==='today')     renderToday();
-  if(currentView==='next7')     renderNext7();
-  if(currentView==='reminders') renderReminders();
-  if(currentView==='workflows') renderWorkflows();
+  if(currentView==='list')       renderList();
+  if(currentView==='kanban')     renderKanban();
+  if(currentView==='calendar')   renderCalendar();
+  if(currentView==='today')      renderToday();
+  if(currentView==='next7')      renderNext7();
+  if(currentView==='reminders')  renderReminders();
+  if(currentView==='workflows')  renderWorkflows();
+  if(currentView==='milestones') renderMilestones();
   updateProgressStrip();
   const TASK_VIEWS_LOAD=['today','next7','list','kanban','calendar','reminders'];
   if(sidebarOpen&&TASK_VIEWS_LOAD.includes(currentView)) renderDailySidebar();
@@ -1680,7 +1777,7 @@ function switchView(v,save=true){
   document.body.classList.toggle('sidebar-open',showDsb);
   if(showDsb) renderDailySidebar();
   // View containers
-  ['today','next7','list','kanban','calendar','reminders','workflows','notes'].forEach(n=>{
+  ['today','next7','list','kanban','calendar','reminders','workflows','milestones','notes'].forEach(n=>{
     const el=document.getElementById('view-'+n);
     if(el) el.style.display=n===v?'':'none';
   });
@@ -1702,15 +1799,103 @@ function switchView(v,save=true){
   if(v==='calendar')  renderCalendar();
   if(v==='today')     renderToday();
   if(v==='next7')     renderNext7();
-  if(v==='reminders') renderReminders();
-  if(v==='workflows') renderWorkflows();
-  if(v==='notes')     renderNotes();
+  if(v==='reminders')  renderReminders();
+  if(v==='workflows')  renderWorkflows();
+  if(v==='milestones') renderMilestones();
+  if(v==='notes')      renderNotes();
   updateProgressStrip();
 }
 
 function goToTasks(){
   const TASK_VIEWS=['today','next7','list','kanban','calendar','reminders'];
   switchView(TASK_VIEWS.includes(currentView)?'today':taskSubView);
+}
+
+// ── Milestones ──────────────────────────────────────────────────────────────
+const MS_LABEL={not_started:'Not Started',in_progress:'In Progress',completed:'Completed'};
+function renderMilestones(){
+  const el=document.getElementById('view-milestones');
+  if(!allMilestones.length){
+    el.innerHTML=`<div class="milestone-add-wrap" style="padding-top:14px">
+      <button class="add-task-btn" onclick="openMilestoneModal(null)">＋ New Milestone</button>
+    </div>
+    <div class="milestone-empty">No milestones yet.<br>Group tasks into phases (e.g. Data Layer, Strategy Engine, Deployment) to track progress across your whole plan.</div>`;
+    return;
+  }
+  const today=todayStr();
+  const cards=allMilestones.map(m=>{
+    const pct=m.task_total?Math.round(m.task_done/m.task_total*100):0;
+    const overdue=m.target_date&&m.target_date<today&&m.status!=='completed';
+    return `<div class="milestone-card" onclick="filterByMilestone(${m.id})">
+      <div class="milestone-card-hdr">
+        <span class="milestone-title">${esc(m.title)}</span>
+        <div class="milestone-actions" onclick="event.stopPropagation()">
+          <button onclick="openMilestoneModal(${m.id})" title="Edit">✎</button>
+        </div>
+      </div>
+      <div class="milestone-meta">
+        <span class="milestone-status-pill ms-${m.status}">${MS_LABEL[m.status]||m.status}</span>
+        ${m.target_date?`<span class="${overdue?'due-o':''}">${overdue?'⚠ ':'🎯 '}${fmtDue(m.target_date)}</span>`:''}
+      </div>
+      ${m.description?`<div class="milestone-desc">${esc(m.description)}</div>`:''}
+      <div class="milestone-progress-track"><div class="milestone-progress-fill" style="width:${pct}%"></div></div>
+      <div class="milestone-progress-lbl">${m.task_done}/${m.task_total} tasks complete${m.task_total?` · ${pct}%`:''}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML=`
+    <div class="milestone-add-wrap" style="padding-top:14px">
+      <button class="add-task-btn" onclick="openMilestoneModal(null)">＋ New Milestone</button>
+    </div>
+    <div class="milestone-grid">${cards}</div>`;
+}
+function filterByMilestone(id){
+  currentMilestoneFilter=id;
+  switchView('list');
+}
+function openMilestoneModal(id){
+  const m=id?allMilestones.find(x=>x.id===id):null;
+  document.getElementById('ms-id').value=id||'';
+  document.getElementById('ms-modal-title-txt').textContent=id?'Edit Milestone':'New Milestone';
+  document.getElementById('ms-title').value=m?.title||'';
+  document.getElementById('ms-target-date').value=m?.target_date||'';
+  document.getElementById('ms-status').value=m?.status||'not_started';
+  document.getElementById('ms-desc').value=m?.description||'';
+  document.getElementById('ms-del-btn').style.display=id?'':'none';
+  document.getElementById('milestone-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('ms-title').focus(),60);
+}
+function closeMilestoneModal(){document.getElementById('milestone-overlay').classList.remove('open');}
+async function saveMilestone(){
+  const title=document.getElementById('ms-title').value.trim();
+  if(!title){document.getElementById('ms-title').focus();return;}
+  const id=document.getElementById('ms-id').value;
+  const body={
+    title,
+    target_date:document.getElementById('ms-target-date').value||null,
+    status:document.getElementById('ms-status').value||'not_started',
+    description:document.getElementById('ms-desc').value.trim(),
+  };
+  const res=await fetch(id?`/milestones/${id}`:'/milestones',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  await res.json();
+  await loadAll();
+  closeMilestoneModal();
+  showToast('🎯 Milestone saved');
+}
+async function deleteMilestoneFromModal(){
+  const id=document.getElementById('ms-id').value;
+  if(!id)return;
+  if(!confirm('Delete this milestone? Tasks assigned to it will be unassigned, not deleted.'))return;
+  await fetch(`/milestones/${id}`,{method:'DELETE'});
+  closeMilestoneModal();
+  await loadAll();
+  showToast('Milestone deleted');
+}
+function renderMilestoneOptions(selectedId){
+  const sel=document.getElementById('p-milestone');
+  if(!sel)return;
+  sel.innerHTML='<option value="">— No milestone —</option>'+
+    allMilestones.map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join('');
+  sel.value=selectedId||'';
 }
 
 function toggleDailySidebar(){
@@ -1844,6 +2029,7 @@ function getVisible(overrideFilter){
   const filter=overrideFilter||currentFilter;
   let tasks=(filter==='all'?allTasks:allTasks.filter(t=>t.status===filter)).filter(t=>t.task_type!=='workflow');
   if(currentTypeFilter!=='all') tasks=tasks.filter(t=>(t.task_type||'general')===currentTypeFilter);
+  if(currentMilestoneFilter) tasks=tasks.filter(t=>t.milestone_id===currentMilestoneFilter);
   if(activeTagIds.size) tasks=tasks.filter(t=>t.tags&&t.tags.some(tg=>activeTagIds.has(tg.id)));
   if(searchQuery){const q=searchQuery.toLowerCase();tasks=tasks.filter(t=>t.title.toLowerCase().includes(q)||(t.description||'').toLowerCase().includes(q));}
   return [...tasks].sort((a,b)=>{
@@ -1886,6 +2072,7 @@ function renderListToolbar(){
   const chips=[];
   if(currentFilter!=='all') chips.push({label:SL[currentFilter],rm:`setFilter('all',document.querySelector('.filter-btn[data-s="all"]'))`});
   if(currentTypeFilter!=='all') chips.push({label:(TC[currentTypeFilter]?.icon||'')+' '+TC[currentTypeFilter]?.label,rm:`setTypeFilter('all',document.querySelector('.type-btn[data-tp="all"]'))`});
+  if(currentMilestoneFilter){const ms=allMilestones.find(m=>m.id===currentMilestoneFilter);if(ms)chips.push({label:'🎯 '+ms.title,rm:`clearMilestoneFilter()`});}
   activeTagIds.forEach(id=>{const tg=allTags.find(t=>t.id===id);if(tg)chips.push({label:tg.name,rm:`toggleTagF(${id})`});});
   if(searchQuery) chips.push({label:`"${searchQuery}"`,rm:`clearSearch()`});
   const hasF=chips.length>0;
@@ -1902,8 +2089,9 @@ function toggleCompact(){
   document.getElementById('view-list').classList.toggle('compact-list',compactMode);
   renderListToolbar();
 }
+function clearMilestoneFilter(){currentMilestoneFilter=null;renderAll();}
 function clearAllFilters(){
-  currentFilter='all';currentTypeFilter='all';activeTagIds.clear();searchQuery='';
+  currentFilter='all';currentTypeFilter='all';currentMilestoneFilter=null;activeTagIds.clear();searchQuery='';
   document.getElementById('search').value='';
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.s==='all'));
   document.querySelectorAll('.type-btn').forEach(b=>{
@@ -1944,6 +2132,8 @@ function cardHtml(t,today,showPomo=false,clickFn='openPanel'){
         ${t.description?`<div class="task-desc">${esc(t.description)}</div>`:''}
         <div class="task-foot">
           ${t.project?`<span class="task-project">📁 ${esc(t.project)}</span>`:''}
+          ${t.milestone?`<span class="task-milestone" onclick="event.stopPropagation();filterByMilestone(${t.milestone.id})">🎯 ${esc(t.milestone.title)}</span>`:''}
+          ${t.is_blocked&&!isDone?`<span class="blocked-badge" title="Blocked by: ${esc((t.depends_on||[]).filter(d=>!['completed','cancelled'].includes(d.status)).map(d=>d.title).join(', '))}">🔒 Blocked</span>`:''}
           ${typeBadge}${estHtml}${timeHtml}${recurHtml}
           ${tagHtml}
         </div>
@@ -2194,16 +2384,18 @@ function kCardHtml(t,today){
   const sub=t.subtask_total?`<span class="kcard-sub">☑ ${t.subtask_done}/${t.subtask_total}</span>`:'';
   const est=t.estimated_minutes?`<span class="kcard-sub">⏳${fmtMin(t.estimated_minutes)}</span>`:'';
   const recur=t.recurrence&&t.recurrence!=='none'?`<span class="kcard-sub" style="color:#a78bfa">↻</span>`:'';
+  const blocked=t.is_blocked&&!['completed','cancelled'].includes(t.status)?`<span class="kcard-sub" style="color:#f59e0b" title="Blocked">🔒</span>`:'';
+  const ms=t.milestone?`<span class="kcard-sub" style="color:#c084fc" title="${esc(t.milestone.title)}">🎯 ${esc(t.milestone.title)}</span>`:'';
   return `<div class="kcard kprio-${t.priority}" draggable="true" data-id="${t.id}"
     onclick="openPanel(${t.id})"
     ondragstart="kDragStart(event,${t.id})" ondragend="kDragEnd(event)">
     <div style="display:flex;gap:6px;align-items:flex-start">
       <span class="pdot p-${t.priority}" style="margin-top:3px;flex-shrink:0"></span>
       <span class="kcard-title">${esc(t.title)}</span>
-      ${recur}
+      ${recur}${blocked}
     </div>
     ${tags?`<div class="kcard-tags">${tags}</div>`:''}
-    <div class="kcard-meta">${due}${sub}${est}</div>
+    <div class="kcard-meta">${due}${sub}${est}${ms}</div>
   </div>`;
 }
 let dragId=null;
@@ -2376,7 +2568,7 @@ function openPanel(id,prefillDate=null){
   panelTab='details';
   // Reset tabs
   document.querySelectorAll('.ptab').forEach((b,i)=>b.classList.toggle('active',i===0));
-  ['details','subtasks','time','activity'].forEach((n,i)=>document.getElementById('ptab-'+n).style.display=i===0?'':'none');
+  ['details','subtasks','time','links','activity'].forEach((n,i)=>document.getElementById('ptab-'+n).style.display=i===0?'':'none');
 
   const task=id?allTasks.find(t=>t.id===id):null;
   document.getElementById('p-id').value       = task?.id??'';
@@ -2389,7 +2581,19 @@ function openPanel(id,prefillDate=null){
   document.getElementById('p-est').value        = String(task?.estimated_minutes??0);
   document.getElementById('p-project').value    = task?.project??'';
   document.getElementById('p-recurrence').value = task?.recurrence??'none';
-  document.getElementById('p-task-type').value  = task?.task_type??'general';
+  const ttSel=document.getElementById('p-task-type');
+  if(task?.task_type==='workflow'){
+    if(!ttSel.querySelector('option[value="workflow"]')){
+      const o=document.createElement('option');o.value='workflow';o.textContent='⚡ Workflow';
+      ttSel.appendChild(o);
+    }
+    ttSel.value='workflow';
+    ttSel.disabled=true;
+  }else{
+    ttSel.disabled=false;
+    ttSel.value=task?.task_type??'general';
+  }
+  renderMilestoneOptions(task?.milestone_id??'');
 
   // Status inline row (quick badge)
   document.getElementById('panel-status-row').innerHTML = task
@@ -2428,9 +2632,10 @@ function closePanel(){
 function switchPTab(name,btn){
   panelTab=name;
   document.querySelectorAll('.ptab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  ['details','subtasks','time','activity'].forEach(n=>document.getElementById('ptab-'+n).style.display=n===name?'':'none');
+  ['details','subtasks','time','links','activity'].forEach(n=>document.getElementById('ptab-'+n).style.display=n===name?'':'none');
   if(name==='subtasks') loadSubtasks();
   if(name==='time')     loadTimeTab();
+  if(name==='links')    renderDependencies();
   if(name==='activity') loadActivity();
 }
 
@@ -2448,6 +2653,7 @@ async function savePanel(){
     project:document.getElementById('p-project').value.trim()||null,
     recurrence:document.getElementById('p-recurrence').value||'none',
     task_type:document.getElementById('p-task-type').value||'general',
+    milestone_id:document.getElementById('p-milestone').value||null,
   };
   const res=await fetch(id?`/tasks/${id}`:'/tasks',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const saved=await res.json();
@@ -2567,6 +2773,52 @@ async function loadActivity(){
         </div>
       </div>`).join('')
     :'<div style="font-size:.76rem;color:var(--txt3)">No activity yet</div>';
+}
+
+// ── Dependencies (Links tab) ───────────────────────────────────────────────────
+function renderDependencies(){
+  if(!panelTaskId){
+    document.getElementById('p-dep-blocked').innerHTML='<p style="color:var(--txt3);font-size:.76rem">Save task first</p>';
+    document.getElementById('p-dep-blocks').innerHTML='';
+    document.getElementById('p-dep-select').innerHTML='';
+    return;
+  }
+  const task=allTasks.find(t=>t.id===panelTaskId);
+  const depIds=new Set((task?.depends_on||[]).map(d=>d.id));
+  document.getElementById('p-dep-blocked').innerHTML=(task?.depends_on||[]).length
+    ?task.depends_on.map(d=>{
+      const active=!['completed','cancelled'].includes(d.status);
+      return `<span class="dep-chip ${active?'blocking':''}">
+        <span class="sb sb-${d.status}"><span class="sdot"></span>${SL[d.status]}</span>
+        ${esc(d.title)}
+        <button onclick="removeDependency(${d.id})" title="Remove">×</button>
+      </span>`;
+    }).join('')
+    :'<div class="dep-empty">Not blocked by anything.</div>';
+  document.getElementById('p-dep-blocks').innerHTML=(task?.blocks||[]).length
+    ?task.blocks.map(d=>`<span class="dep-chip">
+        <span class="sb sb-${d.status}"><span class="sdot"></span>${SL[d.status]}</span>
+        ${esc(d.title)}
+      </span>`).join('')
+    :'<div class="dep-empty">Nothing depends on this task.</div>';
+  const opts=allTasks.filter(t=>t.id!==panelTaskId&&!depIds.has(t.id));
+  document.getElementById('p-dep-select').innerHTML=opts.length
+    ?opts.map(t=>`<option value="${t.id}">${esc(t.title)}</option>`).join('')
+    :'<option value="">No other tasks available</option>';
+}
+async function addDependency(){
+  if(!panelTaskId)return;
+  const sel=document.getElementById('p-dep-select');
+  const depId=sel.value;
+  if(!depId)return;
+  const res=await fetch(`/tasks/${panelTaskId}/dependencies`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({depends_on_id:parseInt(depId)})});
+  if(!res.ok){const err=await res.json();showToast('⚠ '+(err.error||'Could not add dependency'));return;}
+  await loadAll();renderDependencies();
+}
+async function removeDependency(depId){
+  if(!panelTaskId)return;
+  await fetch(`/tasks/${panelTaskId}/dependencies/${depId}`,{method:'DELETE'});
+  await loadAll();renderDependencies();
 }
 
 // ── Quick complete & bulk ─────────────────────────────────────────────────────

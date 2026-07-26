@@ -143,6 +143,25 @@ def init_db():
                 created_at TEXT NOT NULL,
                 FOREIGN KEY (step_id) REFERENCES task_steps(id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS milestones (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                description TEXT DEFAULT '',
+                target_date TEXT DEFAULT NULL,
+                status TEXT NOT NULL DEFAULT 'not_started',
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS task_dependencies (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id INTEGER NOT NULL,
+                depends_on_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                UNIQUE(task_id, depends_on_id),
+                FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+                FOREIGN KEY (depends_on_id) REFERENCES tasks(id) ON DELETE CASCADE
+            );
         """)
         for col, defn in [
             ("priority",           "TEXT NOT NULL DEFAULT 'medium'"),
@@ -152,6 +171,7 @@ def init_db():
             ("project",            "TEXT DEFAULT NULL"),
             ("recurrence",         "TEXT NOT NULL DEFAULT 'none'"),
             ("task_type",          "TEXT NOT NULL DEFAULT 'general'"),
+            ("milestone_id",       "INTEGER DEFAULT NULL"),
         ]:
             try:
                 conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} {defn}")
@@ -351,8 +371,60 @@ def _enrich(conn, tasks):
         t["step_total"] = step_info["total"] or 0
         t["step_done"]  = int(step_info["done"] or 0)
 
+        milestone = None
+        if t.get("milestone_id"):
+            mrow = conn.execute(
+                "SELECT id, title, status FROM milestones WHERE id=?", (t["milestone_id"],)
+            ).fetchone()
+            milestone = dict(mrow) if mrow else None
+        t["milestone"] = milestone
+
+        depends_on = [dict(r) for r in conn.execute(
+            "SELECT tk.id, tk.title, tk.status FROM task_dependencies d "
+            "JOIN tasks tk ON tk.id=d.depends_on_id WHERE d.task_id=?", (tid,)
+        ).fetchall()]
+        blocks = [dict(r) for r in conn.execute(
+            "SELECT tk.id, tk.title, tk.status FROM task_dependencies d "
+            "JOIN tasks tk ON tk.id=d.task_id WHERE d.depends_on_id=?", (tid,)
+        ).fetchall()]
+        t["depends_on"] = depends_on
+        t["blocks"]     = blocks
+        t["is_blocked"] = any(d["status"] not in ("completed", "cancelled") for d in depends_on)
+
         result.append(t)
     return result
+
+
+def _enrich_milestones(conn, rows):
+    """Attach task progress counts to each milestone dict."""
+    result = []
+    for m in rows:
+        md  = dict(m)
+        mid = md["id"]
+        agg = conn.execute(
+            "SELECT COUNT(*) total, "
+            "SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) done "
+            "FROM tasks WHERE milestone_id=?", (mid,)
+        ).fetchone()
+        md["task_total"] = agg["total"] or 0
+        md["task_done"]  = int(agg["done"] or 0)
+        result.append(md)
+    return result
+
+
+def _has_dependency_path(conn, start_id, target_id, visited=None):
+    """True if start_id depends on target_id, directly or transitively."""
+    if visited is None:
+        visited = set()
+    if start_id in visited:
+        return False
+    visited.add(start_id)
+    if start_id == target_id:
+        return True
+    rows = conn.execute(
+        "SELECT depends_on_id FROM task_dependencies WHERE task_id=?", (start_id,)
+    ).fetchall()
+    return any(_has_dependency_path(conn, r["depends_on_id"], target_id, visited) for r in rows)
 
 
 # ── Index ─────────────────────────────────────────────────────────────────────
@@ -385,13 +457,14 @@ def export_csv():
     buf = io.StringIO()
     w   = csv.writer(buf)
     w.writerow(["ID","Title","Type","Description","Status","Priority","Due Date","Due Time",
-                "Est. (min)","Project","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated"])
+                "Est. (min)","Project","Milestone","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated"])
     for t in tasks:
         w.writerow([
             t["id"], t["title"], dict(t).get("task_type","general"),
             t["description"], t["status"], t["priority"],
             t["due_date"] or "", t["due_time"] or "", t["estimated_minutes"] or 0,
-            t["project"] or "", t["recurrence"] or "none",
+            t["project"] or "", t["milestone"]["title"] if t.get("milestone") else "",
+            t["recurrence"] or "none",
             ",".join(tg["name"] for tg in t["tags"]),
             f"{t['subtask_done']}/{t['subtask_total']}",
             round(t["time_total"] / 3600, 2),
@@ -411,13 +484,14 @@ def create_task():
     now = _now()
     with get_db() as conn:
         cur = conn.execute(
-            "INSERT INTO tasks (title,description,status,priority,due_date,due_time,estimated_minutes,project,recurrence,task_type,created_at,updated_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            "INSERT INTO tasks (title,description,status,priority,due_date,due_time,estimated_minutes,project,recurrence,task_type,milestone_id,created_at,updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (title, data.get("description","").strip(), data.get("status","not_started"),
              data.get("priority","medium"), data.get("due_date") or None,
              data.get("due_time") or None, int(data.get("estimated_minutes") or 0),
              data.get("project") or None, data.get("recurrence","none") or "none",
-             data.get("task_type","general") or "general", now, now),
+             data.get("task_type","general") or "general",
+             int(data["milestone_id"]) if data.get("milestone_id") else None, now, now),
         )
         tid = cur.lastrowid
         _log(conn, tid, "created", title)
@@ -443,15 +517,17 @@ def update_task(tid):
         if new_status   != task_d["status"]:   _log(conn, tid, "status_changed",   f"{task_d['status']} → {new_status}")
         if new_priority != task_d["priority"]: _log(conn, tid, "priority_changed", f"{task_d['priority']} → {new_priority}")
         if new_title    != task_d["title"]:    _log(conn, tid, "title_changed",    f"→ {new_title}")
+        new_milestone_id = data["milestone_id"] if "milestone_id" in data else task_d.get("milestone_id")
+        new_milestone_id = int(new_milestone_id) if new_milestone_id else None
         conn.execute(
-            "UPDATE tasks SET title=?,description=?,status=?,priority=?,due_date=?,due_time=?,estimated_minutes=?,project=?,recurrence=?,task_type=?,updated_at=? WHERE id=?",
+            "UPDATE tasks SET title=?,description=?,status=?,priority=?,due_date=?,due_time=?,estimated_minutes=?,project=?,recurrence=?,task_type=?,milestone_id=?,updated_at=? WHERE id=?",
             (new_title, data.get("description", task_d["description"]),
              new_status, new_priority,
              data.get("due_date", task_d["due_date"]) or None,
              data.get("due_time", task_d["due_time"]) or None,
              int(data.get("estimated_minutes", task_d["estimated_minutes"]) or 0),
              data.get("project",  task_d["project"])  or None,
-             new_recurrence, new_task_type, now, tid),
+             new_recurrence, new_task_type, new_milestone_id, now, tid),
         )
         # Auto-spawn next occurrence when a recurring task is completed
         if new_status == "completed" and task_d["status"] != "completed" and new_recurrence != "none":
@@ -579,6 +655,108 @@ def attach_tag(tid, tag_id):
 def detach_tag(tid, tag_id):
     with get_db() as conn:
         conn.execute("DELETE FROM task_tags WHERE task_id=? AND tag_id=?", (tid, tag_id))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+# ── Milestones ────────────────────────────────────────────────────────────────
+
+@app.route("/milestones")
+def get_milestones():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM milestones ORDER BY position, id").fetchall()
+        return jsonify(_enrich_milestones(conn, rows))
+
+
+@app.route("/milestones", methods=["POST"])
+def create_milestone():
+    data  = request.get_json() or {}
+    title = data.get("title", "").strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    now = _now()
+    with get_db() as conn:
+        pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 FROM milestones").fetchone()[0]
+        cur = conn.execute(
+            "INSERT INTO milestones (title,description,target_date,status,position,created_at,updated_at)"
+            " VALUES (?,?,?,?,?,?,?)",
+            (title, data.get("description", "").strip(), data.get("target_date") or None,
+             data.get("status", "not_started") or "not_started", pos, now, now),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM milestones WHERE id=?", (cur.lastrowid,)).fetchone()
+        return jsonify(_enrich_milestones(conn, [row])[0]), 201
+
+
+@app.route("/milestones/<int:mid>", methods=["PUT"])
+def update_milestone(mid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        m = conn.execute("SELECT * FROM milestones WHERE id=?", (mid,)).fetchone()
+        if not m:
+            return jsonify({"error": "Not found"}), 404
+        md  = dict(m)
+        now = _now()
+        conn.execute(
+            "UPDATE milestones SET title=?,description=?,target_date=?,status=?,updated_at=? WHERE id=?",
+            (data.get("title", md["title"]).strip() or md["title"],
+             data.get("description", md["description"]),
+             data.get("target_date", md["target_date"]) or None,
+             data.get("status", md["status"]) or "not_started",
+             now, mid),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM milestones WHERE id=?", (mid,)).fetchone()
+        return jsonify(_enrich_milestones(conn, [row])[0])
+
+
+@app.route("/milestones/<int:mid>", methods=["DELETE"])
+def delete_milestone(mid):
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM milestones WHERE id=?", (mid,)).fetchone():
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("UPDATE tasks SET milestone_id=NULL WHERE milestone_id=?", (mid,))
+        conn.execute("DELETE FROM milestones WHERE id=?", (mid,))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+# ── Task dependencies ────────────────────────────────────────────────────────
+
+@app.route("/tasks/<int:tid>/dependencies", methods=["POST"])
+def add_dependency(tid):
+    data   = request.get_json() or {}
+    dep_id = data.get("depends_on_id")
+    if not dep_id or int(dep_id) == tid:
+        return jsonify({"error": "Invalid dependency"}), 400
+    dep_id = int(dep_id)
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM tasks WHERE id=?", (tid,)).fetchone():
+            return jsonify({"error": "Task not found"}), 404
+        if not conn.execute("SELECT id FROM tasks WHERE id=?", (dep_id,)).fetchone():
+            return jsonify({"error": "Dependency task not found"}), 404
+        if _has_dependency_path(conn, dep_id, tid):
+            return jsonify({"error": "Would create a circular dependency"}), 400
+        try:
+            conn.execute(
+                "INSERT INTO task_dependencies (task_id,depends_on_id,created_at) VALUES (?,?,?)",
+                (tid, dep_id, _now()),
+            )
+            dep_task = conn.execute("SELECT title FROM tasks WHERE id=?", (dep_id,)).fetchone()
+            _log(conn, tid, "dependency_added", f"now depends on \"{dep_task['title']}\"")
+            conn.commit()
+        except sqlite3.IntegrityError:
+            pass
+        return jsonify({"success": True}), 201
+
+
+@app.route("/tasks/<int:tid>/dependencies/<int:dep_id>", methods=["DELETE"])
+def remove_dependency(tid, dep_id):
+    with get_db() as conn:
+        conn.execute(
+            "DELETE FROM task_dependencies WHERE task_id=? AND depends_on_id=?", (tid, dep_id)
+        )
+        _log(conn, tid, "dependency_removed", f"no longer depends on #{dep_id}")
         conn.commit()
         return jsonify({"success": True})
 
@@ -1133,6 +1311,10 @@ def export_xlsx():
             "FROM meeting_points mp JOIN meetings m ON mp.meeting_id=m.id ORDER BY mp.meeting_id, mp.position"
         ).fetchall()
 
+        # Milestones
+        milestone_rows = conn.execute("SELECT * FROM milestones ORDER BY position, id").fetchall()
+        milestones = _enrich_milestones(conn, milestone_rows)
+
         # Steps and step points
         all_steps = conn.execute(
             "SELECT ts.*, t.title AS task_title FROM task_steps ts "
@@ -1151,18 +1333,23 @@ def export_xlsx():
     ws_tasks = wb.active
     ws_tasks.title = "Tasks"
     task_cols = ["ID","Title","Type","Status","Priority","Due Date","Due Time",
-                 "Est (min)","Project","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated","Description"]
+                 "Est (min)","Project","Milestone","Blocked On","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated","Description"]
     _xlsx_header(ws_tasks, task_cols)
     for i, t in enumerate(tasks, 2):
         sub_titles = "; ".join(
             s["title"] for s in all_subs
             if s["task_id"] == t["id"]
         ) or ""
+        blocked_on = "; ".join(
+            d["title"] for d in t["depends_on"] if d["status"] not in ("completed", "cancelled")
+        )
         _xlsx_row(ws_tasks, i, [
             t["id"], t["title"], dict(t).get("task_type","general"),
             t["status"], t["priority"],
             t["due_date"] or "", t["due_time"] or "",
             t["estimated_minutes"] or 0, t["project"] or "",
+            t["milestone"]["title"] if t.get("milestone") else "",
+            blocked_on,
             t["recurrence"] or "none",
             ", ".join(tg["name"] for tg in t["tags"]),
             sub_titles,
@@ -1171,6 +1358,17 @@ def export_xlsx():
         ], alt=i % 2 == 0)
     _auto_width(ws_tasks)
     ws_tasks.freeze_panes = "A2"
+
+    # ── Sheet: Milestones ─────────────────────────────────────────────────────
+    ws_ms = wb.create_sheet("Milestones")
+    _xlsx_header(ws_ms, ["ID","Title","Target Date","Status","Tasks Done","Tasks Total","Description"], color="3a2a1e")
+    for i, m in enumerate(milestones, 2):
+        _xlsx_row(ws_ms, i, [
+            m["id"], m["title"], m["target_date"] or "", m["status"],
+            m["task_done"], m["task_total"], m["description"] or "",
+        ], alt=i % 2 == 0)
+    _auto_width(ws_ms)
+    ws_ms.freeze_panes = "A2"
 
     # ── Sheet 2: Subtasks ─────────────────────────────────────────────────────
     ws_subs = wb.create_sheet("Subtasks")
