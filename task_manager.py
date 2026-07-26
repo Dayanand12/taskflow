@@ -4,6 +4,7 @@ import calendar
 import csv
 import io
 from datetime import datetime, timedelta
+import ai_service
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -134,25 +135,6 @@ def init_db():
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE
             );
-            CREATE TABLE IF NOT EXISTS step_points (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                step_id INTEGER NOT NULL,
-                content TEXT NOT NULL,
-                blocker TEXT DEFAULT NULL,
-                solution TEXT DEFAULT NULL,
-                created_at TEXT NOT NULL,
-                FOREIGN KEY (step_id) REFERENCES task_steps(id) ON DELETE CASCADE
-            );
-            CREATE TABLE IF NOT EXISTS milestones (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                title TEXT NOT NULL,
-                description TEXT DEFAULT '',
-                target_date TEXT DEFAULT NULL,
-                status TEXT NOT NULL DEFAULT 'not_started',
-                position INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL
-            );
             CREATE TABLE IF NOT EXISTS task_dependencies (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 task_id INTEGER NOT NULL,
@@ -162,7 +144,74 @@ def init_db():
                 FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
                 FOREIGN KEY (depends_on_id) REFERENCES tasks(id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS note_books (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                color TEXT NOT NULL DEFAULT 'default',
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS note_chapters (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (book_id) REFERENCES note_books(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS note_pages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                chapter_id INTEGER NOT NULL,
+                title TEXT NOT NULL DEFAULT '',
+                body TEXT NOT NULL DEFAULT '',
+                color TEXT NOT NULL DEFAULT 'default',
+                pinned INTEGER NOT NULL DEFAULT 0,
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (chapter_id) REFERENCES note_chapters(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS flashcard_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL UNIQUE,
+                color TEXT NOT NULL DEFAULT '#3b82f6',
+                position INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+            );
+            CREATE TABLE IF NOT EXISTS flashcards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER DEFAULT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                source_note_id INTEGER DEFAULT NULL,
+                source_note_hash TEXT DEFAULT NULL,
+                is_favorite INTEGER NOT NULL DEFAULT 0,
+                is_ai_generated INTEGER NOT NULL DEFAULT 0,
+                review_count INTEGER NOT NULL DEFAULT 0,
+                ease_factor REAL NOT NULL DEFAULT 2.5,
+                interval_days REAL NOT NULL DEFAULT 0,
+                last_reviewed_at TEXT DEFAULT NULL,
+                next_review_at TEXT DEFAULT NULL,
+                last_rating TEXT DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (category_id) REFERENCES flashcard_categories(id) ON DELETE SET NULL,
+                FOREIGN KEY (source_note_id) REFERENCES note_pages(id) ON DELETE SET NULL
+            );
+            CREATE TABLE IF NOT EXISTS ai_settings (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                base_url TEXT NOT NULL DEFAULT 'http://localhost:11434',
+                model TEXT NOT NULL DEFAULT 'qwen3:8b',
+                updated_at TEXT NOT NULL
+            );
         """)
+        if not conn.execute("SELECT id FROM ai_settings WHERE id=1").fetchone():
+            conn.execute(
+                "INSERT INTO ai_settings (id,base_url,model,updated_at) VALUES (1,?,?,?)",
+                (ai_service.DEFAULT_BASE_URL, ai_service.DEFAULT_MODEL, _now()),
+            )
         for col, defn in [
             ("priority",           "TEXT NOT NULL DEFAULT 'medium'"),
             ("due_date",           "TEXT DEFAULT NULL"),
@@ -171,7 +220,7 @@ def init_db():
             ("project",            "TEXT DEFAULT NULL"),
             ("recurrence",         "TEXT NOT NULL DEFAULT 'none'"),
             ("task_type",          "TEXT NOT NULL DEFAULT 'general'"),
-            ("milestone_id",       "INTEGER DEFAULT NULL"),
+            ("step_id",            "INTEGER DEFAULT NULL"),
         ]:
             try:
                 conn.execute(f"ALTER TABLE tasks ADD COLUMN {col} {defn}")
@@ -182,19 +231,50 @@ def init_db():
                 conn.execute(f"ALTER TABLE reminders ADD COLUMN {col} {defn}")
             except Exception:
                 pass
-        for col, defn in [
-            ("status", "TEXT NOT NULL DEFAULT 'not_started'"),
-            ("notes",  "TEXT DEFAULT ''"),
-        ]:
-            try:
-                conn.execute(f"ALTER TABLE step_points ADD COLUMN {col} {defn}")
-            except Exception:
-                pass
         for col, defn in [("parallel_group", "TEXT DEFAULT NULL")]:
             try:
                 conn.execute(f"ALTER TABLE task_steps ADD COLUMN {col} {defn}")
             except Exception:
                 pass
+        conn.commit()
+        _migrate_step_points_and_milestones(conn)
+
+
+def _migrate_step_points_and_milestones(conn):
+    """One-time migration: fold step_points into real tasks (step_id-linked),
+    then drop the now-unused step_points and milestones tables/columns."""
+    tables = {r["name"] for r in conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table'"
+    ).fetchall()}
+
+    if "step_points" in tables:
+        now = _now()
+        status_map = {"not_started": "not_started", "in_process": "in_process",
+                      "completed": "completed", "cancelled": "cancelled"}
+        for p in conn.execute("SELECT * FROM step_points").fetchall():
+            desc_parts = []
+            if p["notes"]:
+                desc_parts.append(f"Notes: {p['notes']}")
+            if p["blocker"]:
+                desc_parts.append(f"Blocker: {p['blocker']}")
+            if p["solution"]:
+                desc_parts.append(f"Solution: {p['solution']}")
+            conn.execute(
+                "INSERT INTO tasks (title,description,status,priority,task_type,step_id,recurrence,created_at,updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?)",
+                (p["content"], "\n".join(desc_parts), status_map.get(p["status"], "not_started"),
+                 "medium", "general", p["step_id"], "none", p["created_at"], now),
+            )
+        conn.execute("DROP TABLE step_points")
+        conn.commit()
+
+    if "milestones" in tables:
+        conn.execute("DROP TABLE milestones")
+        conn.commit()
+
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()}
+    if "milestone_id" in cols:
+        conn.execute("ALTER TABLE tasks DROP COLUMN milestone_id")
         conn.commit()
 
 
@@ -209,6 +289,30 @@ def _log(conn, task_id, action, detail=None):
         "INSERT INTO activity_log (task_id, action, detail, created_at) VALUES (?,?,?,?)",
         (task_id, action, detail, _now()),
     )
+
+
+def _schedule_review(ease_factor, interval_days, review_count, rating):
+    """Simplified SM-2-style spaced repetition. Returns (new_ease, new_interval, next_review_at_iso)."""
+    ef = ease_factor or 2.5
+    interval = interval_days or 0
+    is_new = review_count == 0
+
+    if rating == "forgot":
+        interval = 0
+        ef = max(1.3, ef - 0.2)
+    elif rating == "hard":
+        interval = 1 if is_new else max(1, interval * 1.2)
+        ef = max(1.3, ef - 0.15)
+    elif rating == "good":
+        interval = 1 if is_new else interval * ef
+    elif rating == "easy":
+        interval = 4 if is_new else interval * ef * 1.3
+        ef = ef + 0.15
+    else:
+        raise ValueError(f"Unknown rating: {rating}")
+
+    next_review = datetime.now() + timedelta(days=interval)
+    return round(ef, 3), round(interval, 3), next_review.isoformat(timespec="seconds")
 
 
 def _add_months(dt, n):
@@ -371,13 +475,14 @@ def _enrich(conn, tasks):
         t["step_total"] = step_info["total"] or 0
         t["step_done"]  = int(step_info["done"] or 0)
 
-        milestone = None
-        if t.get("milestone_id"):
-            mrow = conn.execute(
-                "SELECT id, title, status FROM milestones WHERE id=?", (t["milestone_id"],)
+        step = None
+        if t.get("step_id"):
+            srow = conn.execute(
+                "SELECT ts.id, ts.title, ts.status, ts.task_id AS workflow_id, wf.title AS workflow_title "
+                "FROM task_steps ts JOIN tasks wf ON wf.id=ts.task_id WHERE ts.id=?", (t["step_id"],)
             ).fetchone()
-            milestone = dict(mrow) if mrow else None
-        t["milestone"] = milestone
+            step = dict(srow) if srow else None
+        t["step"] = step
 
         depends_on = [dict(r) for r in conn.execute(
             "SELECT tk.id, tk.title, tk.status FROM task_dependencies d "
@@ -392,23 +497,6 @@ def _enrich(conn, tasks):
         t["is_blocked"] = any(d["status"] not in ("completed", "cancelled") for d in depends_on)
 
         result.append(t)
-    return result
-
-
-def _enrich_milestones(conn, rows):
-    """Attach task progress counts to each milestone dict."""
-    result = []
-    for m in rows:
-        md  = dict(m)
-        mid = md["id"]
-        agg = conn.execute(
-            "SELECT COUNT(*) total, "
-            "SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) done "
-            "FROM tasks WHERE milestone_id=?", (mid,)
-        ).fetchone()
-        md["task_total"] = agg["total"] or 0
-        md["task_done"]  = int(agg["done"] or 0)
-        result.append(md)
     return result
 
 
@@ -457,13 +545,14 @@ def export_csv():
     buf = io.StringIO()
     w   = csv.writer(buf)
     w.writerow(["ID","Title","Type","Description","Status","Priority","Due Date","Due Time",
-                "Est. (min)","Project","Milestone","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated"])
+                "Est. (min)","Project","Workflow","Step","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated"])
     for t in tasks:
+        step = t.get("step")
         w.writerow([
             t["id"], t["title"], dict(t).get("task_type","general"),
             t["description"], t["status"], t["priority"],
             t["due_date"] or "", t["due_time"] or "", t["estimated_minutes"] or 0,
-            t["project"] or "", t["milestone"]["title"] if t.get("milestone") else "",
+            t["project"] or "", step["workflow_title"] if step else "", step["title"] if step else "",
             t["recurrence"] or "none",
             ",".join(tg["name"] for tg in t["tags"]),
             f"{t['subtask_done']}/{t['subtask_total']}",
@@ -484,14 +573,14 @@ def create_task():
     now = _now()
     with get_db() as conn:
         cur = conn.execute(
-            "INSERT INTO tasks (title,description,status,priority,due_date,due_time,estimated_minutes,project,recurrence,task_type,milestone_id,created_at,updated_at)"
+            "INSERT INTO tasks (title,description,status,priority,due_date,due_time,estimated_minutes,project,recurrence,task_type,step_id,created_at,updated_at)"
             " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (title, data.get("description","").strip(), data.get("status","not_started"),
              data.get("priority","medium"), data.get("due_date") or None,
              data.get("due_time") or None, int(data.get("estimated_minutes") or 0),
              data.get("project") or None, data.get("recurrence","none") or "none",
              data.get("task_type","general") or "general",
-             int(data["milestone_id"]) if data.get("milestone_id") else None, now, now),
+             int(data["step_id"]) if data.get("step_id") else None, now, now),
         )
         tid = cur.lastrowid
         _log(conn, tid, "created", title)
@@ -517,17 +606,17 @@ def update_task(tid):
         if new_status   != task_d["status"]:   _log(conn, tid, "status_changed",   f"{task_d['status']} → {new_status}")
         if new_priority != task_d["priority"]: _log(conn, tid, "priority_changed", f"{task_d['priority']} → {new_priority}")
         if new_title    != task_d["title"]:    _log(conn, tid, "title_changed",    f"→ {new_title}")
-        new_milestone_id = data["milestone_id"] if "milestone_id" in data else task_d.get("milestone_id")
-        new_milestone_id = int(new_milestone_id) if new_milestone_id else None
+        new_step_id = data["step_id"] if "step_id" in data else task_d.get("step_id")
+        new_step_id = int(new_step_id) if new_step_id else None
         conn.execute(
-            "UPDATE tasks SET title=?,description=?,status=?,priority=?,due_date=?,due_time=?,estimated_minutes=?,project=?,recurrence=?,task_type=?,milestone_id=?,updated_at=? WHERE id=?",
+            "UPDATE tasks SET title=?,description=?,status=?,priority=?,due_date=?,due_time=?,estimated_minutes=?,project=?,recurrence=?,task_type=?,step_id=?,updated_at=? WHERE id=?",
             (new_title, data.get("description", task_d["description"]),
              new_status, new_priority,
              data.get("due_date", task_d["due_date"]) or None,
              data.get("due_time", task_d["due_time"]) or None,
              int(data.get("estimated_minutes", task_d["estimated_minutes"]) or 0),
              data.get("project",  task_d["project"])  or None,
-             new_recurrence, new_task_type, new_milestone_id, now, tid),
+             new_recurrence, new_task_type, new_step_id, now, tid),
         )
         # Auto-spawn next occurrence when a recurring task is completed
         if new_status == "completed" and task_d["status"] != "completed" and new_recurrence != "none":
@@ -659,68 +748,6 @@ def detach_tag(tid, tag_id):
         return jsonify({"success": True})
 
 
-# ── Milestones ────────────────────────────────────────────────────────────────
-
-@app.route("/milestones")
-def get_milestones():
-    with get_db() as conn:
-        rows = conn.execute("SELECT * FROM milestones ORDER BY position, id").fetchall()
-        return jsonify(_enrich_milestones(conn, rows))
-
-
-@app.route("/milestones", methods=["POST"])
-def create_milestone():
-    data  = request.get_json() or {}
-    title = data.get("title", "").strip()
-    if not title:
-        return jsonify({"error": "Title required"}), 400
-    now = _now()
-    with get_db() as conn:
-        pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 FROM milestones").fetchone()[0]
-        cur = conn.execute(
-            "INSERT INTO milestones (title,description,target_date,status,position,created_at,updated_at)"
-            " VALUES (?,?,?,?,?,?,?)",
-            (title, data.get("description", "").strip(), data.get("target_date") or None,
-             data.get("status", "not_started") or "not_started", pos, now, now),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM milestones WHERE id=?", (cur.lastrowid,)).fetchone()
-        return jsonify(_enrich_milestones(conn, [row])[0]), 201
-
-
-@app.route("/milestones/<int:mid>", methods=["PUT"])
-def update_milestone(mid):
-    data = request.get_json() or {}
-    with get_db() as conn:
-        m = conn.execute("SELECT * FROM milestones WHERE id=?", (mid,)).fetchone()
-        if not m:
-            return jsonify({"error": "Not found"}), 404
-        md  = dict(m)
-        now = _now()
-        conn.execute(
-            "UPDATE milestones SET title=?,description=?,target_date=?,status=?,updated_at=? WHERE id=?",
-            (data.get("title", md["title"]).strip() or md["title"],
-             data.get("description", md["description"]),
-             data.get("target_date", md["target_date"]) or None,
-             data.get("status", md["status"]) or "not_started",
-             now, mid),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM milestones WHERE id=?", (mid,)).fetchone()
-        return jsonify(_enrich_milestones(conn, [row])[0])
-
-
-@app.route("/milestones/<int:mid>", methods=["DELETE"])
-def delete_milestone(mid):
-    with get_db() as conn:
-        if not conn.execute("SELECT id FROM milestones WHERE id=?", (mid,)).fetchone():
-            return jsonify({"error": "Not found"}), 404
-        conn.execute("UPDATE tasks SET milestone_id=NULL WHERE milestone_id=?", (mid,))
-        conn.execute("DELETE FROM milestones WHERE id=?", (mid,))
-        conn.commit()
-        return jsonify({"success": True})
-
-
 # ── Task dependencies ────────────────────────────────────────────────────────
 
 @app.route("/tasks/<int:tid>/dependencies", methods=["POST"])
@@ -759,6 +786,441 @@ def remove_dependency(tid, dep_id):
         _log(conn, tid, "dependency_removed", f"no longer depends on #{dep_id}")
         conn.commit()
         return jsonify({"success": True})
+
+
+# ── Notes (Books › Chapters › Pages) ────────────────────────────────────────────
+
+def _enrich_notebooks(conn, book_rows):
+    result = []
+    for b in book_rows:
+        bd = dict(b)
+        chapters = []
+        for c in conn.execute(
+            "SELECT * FROM note_chapters WHERE book_id=? ORDER BY position, id", (bd["id"],)
+        ).fetchall():
+            cd = dict(c)
+            cd["pages"] = [dict(p) for p in conn.execute(
+                "SELECT * FROM note_pages WHERE chapter_id=? ORDER BY position, id", (cd["id"],)
+            ).fetchall()]
+            chapters.append(cd)
+        bd["chapters"] = chapters
+        result.append(bd)
+    return result
+
+
+@app.route("/notes/books")
+def get_notebooks():
+    with get_db() as conn:
+        rows = conn.execute("SELECT * FROM note_books ORDER BY position, id").fetchall()
+        return jsonify(_enrich_notebooks(conn, rows))
+
+
+@app.route("/notes/books", methods=["POST"])
+def create_notebook():
+    data  = request.get_json() or {}
+    title = data.get("title", "").strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    now = _now()
+    with get_db() as conn:
+        pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 FROM note_books").fetchone()[0]
+        cur = conn.execute(
+            "INSERT INTO note_books (title,color,position,created_at,updated_at) VALUES (?,?,?,?,?)",
+            (title, data.get("color", "default") or "default", pos, now, now),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_books WHERE id=?", (cur.lastrowid,)).fetchone()
+        bd = dict(row); bd["chapters"] = []
+        return jsonify(bd), 201
+
+
+@app.route("/notes/books/<int:bid>", methods=["PUT"])
+def update_notebook(bid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        b = conn.execute("SELECT * FROM note_books WHERE id=?", (bid,)).fetchone()
+        if not b:
+            return jsonify({"error": "Not found"}), 404
+        bd  = dict(b)
+        now = _now()
+        conn.execute(
+            "UPDATE note_books SET title=?,color=?,updated_at=? WHERE id=?",
+            (data.get("title", bd["title"]).strip() or bd["title"],
+             data.get("color", bd["color"]) or "default", now, bid),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_books WHERE id=?", (bid,)).fetchone()
+        return jsonify(dict(row))
+
+
+@app.route("/notes/books/<int:bid>", methods=["DELETE"])
+def delete_notebook(bid):
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM note_books WHERE id=?", (bid,)).fetchone():
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("DELETE FROM note_books WHERE id=?", (bid,))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+@app.route("/notes/books/<int:bid>/chapters", methods=["POST"])
+def create_chapter(bid):
+    data  = request.get_json() or {}
+    title = data.get("title", "").strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    now = _now()
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM note_books WHERE id=?", (bid,)).fetchone():
+            return jsonify({"error": "Notebook not found"}), 404
+        pos = conn.execute(
+            "SELECT COALESCE(MAX(position),0)+1 FROM note_chapters WHERE book_id=?", (bid,)
+        ).fetchone()[0]
+        cur = conn.execute(
+            "INSERT INTO note_chapters (book_id,title,position,created_at,updated_at) VALUES (?,?,?,?,?)",
+            (bid, title, pos, now, now),
+        )
+        conn.execute("UPDATE note_books SET updated_at=? WHERE id=?", (now, bid))
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_chapters WHERE id=?", (cur.lastrowid,)).fetchone()
+        cd = dict(row); cd["pages"] = []
+        return jsonify(cd), 201
+
+
+@app.route("/notes/chapters/<int:cid>", methods=["PUT"])
+def update_chapter(cid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        c = conn.execute("SELECT * FROM note_chapters WHERE id=?", (cid,)).fetchone()
+        if not c:
+            return jsonify({"error": "Not found"}), 404
+        cd  = dict(c)
+        now = _now()
+        conn.execute(
+            "UPDATE note_chapters SET title=?,updated_at=? WHERE id=?",
+            (data.get("title", cd["title"]).strip() or cd["title"], now, cid),
+        )
+        conn.execute("UPDATE note_books SET updated_at=? WHERE id=?", (now, cd["book_id"]))
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_chapters WHERE id=?", (cid,)).fetchone()
+        return jsonify(dict(row))
+
+
+@app.route("/notes/chapters/<int:cid>", methods=["DELETE"])
+def delete_chapter(cid):
+    with get_db() as conn:
+        c = conn.execute("SELECT * FROM note_chapters WHERE id=?", (cid,)).fetchone()
+        if not c:
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("DELETE FROM note_chapters WHERE id=?", (cid,))
+        conn.execute("UPDATE note_books SET updated_at=? WHERE id=?", (_now(), c["book_id"]))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+@app.route("/notes/chapters/<int:cid>/pages", methods=["POST"])
+def create_page(cid):
+    data  = request.get_json() or {}
+    title = data.get("title", "").strip()
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    now = _now()
+    with get_db() as conn:
+        chapter = conn.execute("SELECT * FROM note_chapters WHERE id=?", (cid,)).fetchone()
+        if not chapter:
+            return jsonify({"error": "Chapter not found"}), 404
+        pos = conn.execute(
+            "SELECT COALESCE(MIN(position),0)-1 FROM note_pages WHERE chapter_id=?", (cid,)
+        ).fetchone()[0]
+        cur = conn.execute(
+            "INSERT INTO note_pages (chapter_id,title,body,color,pinned,position,created_at,updated_at)"
+            " VALUES (?,?,?,?,?,?,?,?)",
+            (cid, title, data.get("body", "") or "", data.get("color", "default") or "default",
+             1 if data.get("pinned") else 0, pos, now, now),
+        )
+        conn.execute("UPDATE note_chapters SET updated_at=? WHERE id=?", (now, cid))
+        conn.execute("UPDATE note_books SET updated_at=? WHERE id=?", (now, chapter["book_id"]))
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_pages WHERE id=?", (cur.lastrowid,)).fetchone()
+        return jsonify(dict(row)), 201
+
+
+@app.route("/notes/pages/<int:pid>", methods=["PUT"])
+def update_page(pid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        p = conn.execute("SELECT * FROM note_pages WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return jsonify({"error": "Not found"}), 404
+        pd  = dict(p)
+        now = _now()
+        conn.execute(
+            "UPDATE note_pages SET title=?,body=?,color=?,pinned=?,updated_at=? WHERE id=?",
+            (data.get("title", pd["title"]), data.get("body", pd["body"]),
+             data.get("color", pd["color"]) or "default",
+             1 if data.get("pinned", pd["pinned"]) else 0, now, pid),
+        )
+        chapter = conn.execute("SELECT * FROM note_chapters WHERE id=?", (pd["chapter_id"],)).fetchone()
+        conn.execute("UPDATE note_chapters SET updated_at=? WHERE id=?", (now, pd["chapter_id"]))
+        if chapter:
+            conn.execute("UPDATE note_books SET updated_at=? WHERE id=?", (now, chapter["book_id"]))
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_pages WHERE id=?", (pid,)).fetchone()
+        return jsonify(dict(row))
+
+
+@app.route("/notes/pages/<int:pid>", methods=["DELETE"])
+def delete_page(pid):
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM note_pages WHERE id=?", (pid,)).fetchone():
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("DELETE FROM note_pages WHERE id=?", (pid,))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+# ── Flashcards: categories ──────────────────────────────────────────────────────
+
+@app.route("/flashcards/categories")
+def get_flashcard_categories():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT c.*, "
+            "(SELECT COUNT(*) FROM flashcards f WHERE f.category_id=c.id) AS card_total, "
+            "(SELECT COUNT(*) FROM flashcards f WHERE f.category_id=c.id AND (f.next_review_at IS NULL OR f.next_review_at<=?)) AS card_due "
+            "FROM flashcard_categories c ORDER BY c.position, c.id",
+            (_now(),),
+        ).fetchall()
+        return jsonify([dict(r) for r in rows])
+
+
+@app.route("/flashcards/categories", methods=["POST"])
+def create_flashcard_category():
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    with get_db() as conn:
+        pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 FROM flashcard_categories").fetchone()[0]
+        try:
+            cur = conn.execute(
+                "INSERT INTO flashcard_categories (name,color,position,created_at) VALUES (?,?,?,?)",
+                (name, data.get("color", "#3b82f6") or "#3b82f6", pos, _now()),
+            )
+            conn.commit()
+            row = conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cur.lastrowid,)).fetchone()
+            rd = dict(row); rd["card_total"] = 0; rd["card_due"] = 0
+            return jsonify(rd), 201
+        except sqlite3.IntegrityError:
+            row = conn.execute("SELECT * FROM flashcard_categories WHERE name=?", (name,)).fetchone()
+            rd = dict(row); rd["card_total"] = 0; rd["card_due"] = 0
+            return jsonify(rd)
+
+
+@app.route("/flashcards/categories/<int:cid>", methods=["PUT"])
+def update_flashcard_category(cid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        c = conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cid,)).fetchone()
+        if not c:
+            return jsonify({"error": "Not found"}), 404
+        cd = dict(c)
+        conn.execute(
+            "UPDATE flashcard_categories SET name=?,color=? WHERE id=?",
+            (data.get("name", cd["name"]).strip() or cd["name"],
+             data.get("color", cd["color"]) or cd["color"], cid),
+        )
+        conn.commit()
+        return jsonify(dict(conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cid,)).fetchone()))
+
+
+@app.route("/flashcards/categories/<int:cid>", methods=["DELETE"])
+def delete_flashcard_category(cid):
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM flashcard_categories WHERE id=?", (cid,)).fetchone():
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("UPDATE flashcards SET category_id=NULL WHERE category_id=?", (cid,))
+        conn.execute("DELETE FROM flashcard_categories WHERE id=?", (cid,))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+# ── Flashcards: cards ────────────────────────────────────────────────────────────
+
+def _enrich_flashcard(conn, row):
+    fd = dict(row)
+    cat = None
+    if fd.get("category_id"):
+        crow = conn.execute("SELECT id,name,color FROM flashcard_categories WHERE id=?", (fd["category_id"],)).fetchone()
+        cat = dict(crow) if crow else None
+    fd["category"] = cat
+    note = None
+    if fd.get("source_note_id"):
+        nrow = conn.execute(
+            "SELECT np.id, np.title, np.chapter_id, nc.book_id "
+            "FROM note_pages np JOIN note_chapters nc ON nc.id=np.chapter_id WHERE np.id=?",
+            (fd["source_note_id"],),
+        ).fetchone()
+        note = dict(nrow) if nrow else None
+    fd["source_note"] = note
+    fd["is_due"] = (not fd.get("next_review_at")) or fd["next_review_at"] <= _now()
+    return fd
+
+
+@app.route("/flashcards")
+def get_flashcards():
+    category_id = request.args.get("category_id", type=int)
+    q = request.args.get("q", "").strip()
+    favorite = request.args.get("favorite")
+    with get_db() as conn:
+        sql = "SELECT * FROM flashcards WHERE 1=1"
+        params = []
+        if category_id:
+            sql += " AND category_id=?"; params.append(category_id)
+        if q:
+            sql += " AND (question LIKE ? OR answer LIKE ?)"
+            like = f"%{q}%"; params += [like, like]
+        if favorite:
+            sql += " AND is_favorite=1"
+        sql += " ORDER BY created_at DESC"
+        rows = conn.execute(sql, params).fetchall()
+        return jsonify([_enrich_flashcard(conn, r) for r in rows])
+
+
+@app.route("/flashcards/due")
+def get_due_flashcards():
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM flashcards WHERE next_review_at IS NULL OR next_review_at<=? ORDER BY next_review_at IS NULL DESC, next_review_at",
+            (_now(),),
+        ).fetchall()
+        cards = [_enrich_flashcard(conn, r) for r in rows]
+        by_cat = {}
+        for c in cards:
+            key = c["category"]["name"] if c["category"] else "Uncategorized"
+            by_cat.setdefault(key, {"category": c["category"], "cards": []})
+            by_cat[key]["cards"].append(c)
+        return jsonify({"total": len(cards), "by_category": list(by_cat.values()), "cards": cards})
+
+
+@app.route("/flashcards", methods=["POST"])
+def create_flashcard():
+    data = request.get_json() or {}
+    question = data.get("question", "").strip()
+    answer = data.get("answer", "").strip()
+    if not question or not answer:
+        return jsonify({"error": "Question and answer are required"}), 400
+    now = _now()
+    with get_db() as conn:
+        cur = conn.execute(
+            "INSERT INTO flashcards (category_id,question,answer,source_note_id,source_note_hash,"
+            "is_ai_generated,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
+            (data.get("category_id") or None, question, answer,
+             data.get("source_note_id") or None, data.get("source_note_hash") or None,
+             1 if data.get("is_ai_generated") else 0, now, now),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (cur.lastrowid,)).fetchone()
+        return jsonify(_enrich_flashcard(conn, row)), 201
+
+
+@app.route("/flashcards/<int:fid>", methods=["PUT"])
+def update_flashcard(fid):
+    data = request.get_json() or {}
+    with get_db() as conn:
+        f = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
+        if not f:
+            return jsonify({"error": "Not found"}), 404
+        fd = dict(f)
+        conn.execute(
+            "UPDATE flashcards SET question=?,answer=?,category_id=?,is_favorite=?,updated_at=? WHERE id=?",
+            (data.get("question", fd["question"]).strip() or fd["question"],
+             data.get("answer", fd["answer"]).strip() or fd["answer"],
+             data.get("category_id", fd["category_id"]) or None,
+             1 if data.get("is_favorite", fd["is_favorite"]) else 0,
+             _now(), fid),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
+        return jsonify(_enrich_flashcard(conn, row))
+
+
+@app.route("/flashcards/<int:fid>", methods=["DELETE"])
+def delete_flashcard(fid):
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM flashcards WHERE id=?", (fid,)).fetchone():
+            return jsonify({"error": "Not found"}), 404
+        conn.execute("DELETE FROM flashcards WHERE id=?", (fid,))
+        conn.commit()
+        return jsonify({"success": True})
+
+
+@app.route("/flashcards/<int:fid>/review", methods=["POST"])
+def review_flashcard(fid):
+    data = request.get_json() or {}
+    rating = data.get("rating")
+    if rating not in ("forgot", "hard", "good", "easy"):
+        return jsonify({"error": "rating must be one of forgot/hard/good/easy"}), 400
+    with get_db() as conn:
+        f = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
+        if not f:
+            return jsonify({"error": "Not found"}), 404
+        fd = dict(f)
+        ef, interval, next_review = _schedule_review(fd["ease_factor"], fd["interval_days"], fd["review_count"], rating)
+        now = _now()
+        conn.execute(
+            "UPDATE flashcards SET review_count=review_count+1,ease_factor=?,interval_days=?,"
+            "last_reviewed_at=?,next_review_at=?,last_rating=?,updated_at=? WHERE id=?",
+            (ef, interval, now, next_review, rating, now, fid),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
+        return jsonify(_enrich_flashcard(conn, row))
+
+
+# ── AI service settings ─────────────────────────────────────────────────────────
+
+@app.route("/ai/settings")
+def get_ai_settings():
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()
+        return jsonify(dict(row))
+
+
+@app.route("/ai/settings", methods=["PUT"])
+def update_ai_settings():
+    data = request.get_json() or {}
+    with get_db() as conn:
+        row = conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()
+        rd = dict(row)
+        base_url = (data.get("base_url", rd["base_url"]) or "").strip() or rd["base_url"]
+        model = (data.get("model", rd["model"]) or "").strip() or rd["model"]
+        conn.execute(
+            "UPDATE ai_settings SET base_url=?,model=?,updated_at=? WHERE id=1",
+            (base_url, model, _now()),
+        )
+        conn.commit()
+        return jsonify(dict(conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()))
+
+
+@app.route("/ai/test", methods=["POST"])
+def test_ai_connection():
+    """Test connectivity to Ollama. Uses the base_url in the request body if given
+    (so the UI can test before saving), otherwise falls back to the saved setting."""
+    data = request.get_json() or {}
+    with get_db() as conn:
+        settings = dict(conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone())
+    base_url = (data.get("base_url") or "").strip() or settings["base_url"]
+    ok, result = ai_service.test_connection(base_url)
+    if not ok:
+        return jsonify({"connected": False, "error": result["error"], "models": []})
+    configured_model = (data.get("model") or "").strip() or settings["model"]
+    return jsonify({
+        "connected": True,
+        "models": result["models"],
+        "model_available": configured_model in result["models"],
+        "configured_model": configured_model,
+    })
 
 
 # ── Activity log ──────────────────────────────────────────────────────────────
@@ -1119,7 +1581,7 @@ def delete_meeting_point(pid):
         return jsonify({"success": True})
 
 
-# ── Task Steps & Points ───────────────────────────────────────────────────────
+# ── Task Steps (workflow phases, each holding real tasks) ─────────────────────
 
 def _enrich_steps(conn, tid):
     steps = conn.execute(
@@ -1128,10 +1590,13 @@ def _enrich_steps(conn, tid):
     result = []
     for s in steps:
         sd = dict(s)
-        pts = conn.execute(
-            "SELECT * FROM step_points WHERE step_id=? ORDER BY id", (s["id"],)
+        step_tasks = conn.execute(
+            "SELECT * FROM tasks WHERE step_id=? ORDER BY created_at", (s["id"],)
         ).fetchall()
-        sd["points"] = [dict(p) for p in pts]
+        enriched = _enrich(conn, step_tasks)
+        sd["tasks"]      = enriched
+        sd["task_total"] = len(enriched)
+        sd["task_done"]  = sum(1 for t in enriched if t["status"] == "completed")
         result.append(sd)
     return result
 
@@ -1160,7 +1625,9 @@ def add_step(tid):
         )
         conn.commit()
         sd = dict(conn.execute("SELECT * FROM task_steps WHERE id=?", (cur.lastrowid,)).fetchone())
-        sd["points"] = []
+        sd["tasks"] = []
+        sd["task_total"] = 0
+        sd["task_done"]  = 0
         return jsonify(sd), 201
 
 
@@ -1180,9 +1647,11 @@ def update_step(sid):
         )
         conn.commit()
         sd = dict(conn.execute("SELECT * FROM task_steps WHERE id=?", (sid,)).fetchone())
-        sd["points"] = [dict(p) for p in conn.execute(
-            "SELECT * FROM step_points WHERE step_id=? ORDER BY id", (sid,)
-        ).fetchall()]
+        step_tasks = conn.execute("SELECT * FROM tasks WHERE step_id=? ORDER BY created_at", (sid,)).fetchall()
+        enriched = _enrich(conn, step_tasks)
+        sd["tasks"]      = enriched
+        sd["task_total"] = len(enriched)
+        sd["task_done"]  = sum(1 for t in enriched if t["status"] == "completed")
         return jsonify(sd)
 
 
@@ -1191,60 +1660,8 @@ def delete_step(sid):
     with get_db() as conn:
         if not conn.execute("SELECT id FROM task_steps WHERE id=?", (sid,)).fetchone():
             return jsonify({"error": "Not found"}), 404
+        conn.execute("UPDATE tasks SET step_id=NULL WHERE step_id=?", (sid,))
         conn.execute("DELETE FROM task_steps WHERE id=?", (sid,))
-        conn.commit()
-        return jsonify({"success": True})
-
-
-@app.route("/steps/<int:sid>/points", methods=["POST"])
-def add_point(sid):
-    data    = request.get_json() or {}
-    content = data.get("content", "").strip()
-    if not content:
-        return jsonify({"error": "Content required"}), 400
-    now = _now()
-    with get_db() as conn:
-        cur = conn.execute(
-            "INSERT INTO step_points (step_id,content,blocker,solution,status,notes,created_at) VALUES (?,?,?,?,?,?,?)",
-            (sid, content,
-             data.get("blocker") or None,
-             data.get("solution") or None,
-             data.get("status", "not_started"),
-             data.get("notes", "") or "",
-             now),
-        )
-        conn.commit()
-        return jsonify(dict(conn.execute(
-            "SELECT * FROM step_points WHERE id=?", (cur.lastrowid,)
-        ).fetchone())), 201
-
-
-@app.route("/points/<int:pid>", methods=["PUT"])
-def update_point(pid):
-    data = request.get_json() or {}
-    with get_db() as conn:
-        p = conn.execute("SELECT * FROM step_points WHERE id=?", (pid,)).fetchone()
-        if not p:
-            return jsonify({"error": "Not found"}), 404
-        conn.execute(
-            "UPDATE step_points SET content=?,blocker=?,solution=?,status=?,notes=? WHERE id=?",
-            (data.get("content", p["content"]).strip() or p["content"],
-             data.get("blocker") or None,
-             data.get("solution") or None,
-             data.get("status", p["status"] or "not_started"),
-             data.get("notes", p["notes"] or "") or "",
-             pid),
-        )
-        conn.commit()
-        return jsonify(dict(conn.execute(
-            "SELECT * FROM step_points WHERE id=?", (pid,)
-        ).fetchone()))
-
-
-@app.route("/points/<int:pid>", methods=["DELETE"])
-def delete_point(pid):
-    with get_db() as conn:
-        conn.execute("DELETE FROM step_points WHERE id=?", (pid,))
         conn.commit()
         return jsonify({"success": True})
 
@@ -1311,20 +1728,12 @@ def export_xlsx():
             "FROM meeting_points mp JOIN meetings m ON mp.meeting_id=m.id ORDER BY mp.meeting_id, mp.position"
         ).fetchall()
 
-        # Milestones
-        milestone_rows = conn.execute("SELECT * FROM milestones ORDER BY position, id").fetchall()
-        milestones = _enrich_milestones(conn, milestone_rows)
-
-        # Steps and step points
+        # Workflow steps, with task progress rolled up
         all_steps = conn.execute(
-            "SELECT ts.*, t.title AS task_title FROM task_steps ts "
-            "JOIN tasks t ON ts.task_id=t.id ORDER BY ts.task_id, ts.position"
-        ).fetchall()
-        all_step_points = conn.execute(
-            "SELECT sp.*, ts.title AS step_title, ts.task_id, t.title AS task_title "
-            "FROM step_points sp "
-            "JOIN task_steps ts ON sp.step_id=ts.id "
-            "JOIN tasks t ON ts.task_id=t.id ORDER BY sp.step_id, sp.id"
+            "SELECT ts.*, t.title AS task_title,"
+            " (SELECT COUNT(*) FROM tasks tk WHERE tk.step_id=ts.id) AS task_total,"
+            " (SELECT COUNT(*) FROM tasks tk WHERE tk.step_id=ts.id AND tk.status='completed') AS task_done"
+            " FROM task_steps ts JOIN tasks t ON ts.task_id=t.id ORDER BY ts.task_id, ts.position"
         ).fetchall()
 
     wb = Workbook()
@@ -1333,7 +1742,7 @@ def export_xlsx():
     ws_tasks = wb.active
     ws_tasks.title = "Tasks"
     task_cols = ["ID","Title","Type","Status","Priority","Due Date","Due Time",
-                 "Est (min)","Project","Milestone","Blocked On","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated","Description"]
+                 "Est (min)","Project","Workflow","Step","Blocked On","Recurrence","Tags","Subtasks","Time (hrs)","Created","Updated","Description"]
     _xlsx_header(ws_tasks, task_cols)
     for i, t in enumerate(tasks, 2):
         sub_titles = "; ".join(
@@ -1343,12 +1752,13 @@ def export_xlsx():
         blocked_on = "; ".join(
             d["title"] for d in t["depends_on"] if d["status"] not in ("completed", "cancelled")
         )
+        step = t.get("step")
         _xlsx_row(ws_tasks, i, [
             t["id"], t["title"], dict(t).get("task_type","general"),
             t["status"], t["priority"],
             t["due_date"] or "", t["due_time"] or "",
             t["estimated_minutes"] or 0, t["project"] or "",
-            t["milestone"]["title"] if t.get("milestone") else "",
+            step["workflow_title"] if step else "", step["title"] if step else "",
             blocked_on,
             t["recurrence"] or "none",
             ", ".join(tg["name"] for tg in t["tags"]),
@@ -1358,17 +1768,6 @@ def export_xlsx():
         ], alt=i % 2 == 0)
     _auto_width(ws_tasks)
     ws_tasks.freeze_panes = "A2"
-
-    # ── Sheet: Milestones ─────────────────────────────────────────────────────
-    ws_ms = wb.create_sheet("Milestones")
-    _xlsx_header(ws_ms, ["ID","Title","Target Date","Status","Tasks Done","Tasks Total","Description"], color="3a2a1e")
-    for i, m in enumerate(milestones, 2):
-        _xlsx_row(ws_ms, i, [
-            m["id"], m["title"], m["target_date"] or "", m["status"],
-            m["task_done"], m["task_total"], m["description"] or "",
-        ], alt=i % 2 == 0)
-    _auto_width(ws_ms)
-    ws_ms.freeze_panes = "A2"
 
     # ── Sheet 2: Subtasks ─────────────────────────────────────────────────────
     ws_subs = wb.create_sheet("Subtasks")
@@ -1410,28 +1809,16 @@ def export_xlsx():
     _auto_width(ws_pts)
     ws_pts.freeze_panes = "A2"
 
-    # ── Sheet 5: Steps ────────────────────────────────────────────────────────
-    ws_steps = wb.create_sheet("Steps")
-    _xlsx_header(ws_steps, ["Task ID","Task Title","Step #","Step Title","Status","Created"], color="1a2a3a")
+    # ── Sheet 5: Workflow Steps ────────────────────────────────────────────────
+    ws_steps = wb.create_sheet("Workflow Steps")
+    _xlsx_header(ws_steps, ["Workflow ID","Workflow Title","Step #","Step Title","Status","Tasks Done","Tasks Total","Created"], color="1a2a3a")
     for i, s in enumerate(all_steps, 2):
         _xlsx_row(ws_steps, i, [
             s["task_id"], s["task_title"], s["position"],
-            s["title"], s["status"], s["created_at"],
+            s["title"], s["status"], s["task_done"], s["task_total"], s["created_at"],
         ], alt=i % 2 == 0)
     _auto_width(ws_steps)
     ws_steps.freeze_panes = "A2"
-
-    # ── Sheet 6: Step Points ──────────────────────────────────────────────────
-    ws_sp = wb.create_sheet("Step Tasks")
-    _xlsx_header(ws_sp, ["Task ID","Task Title","Step Title","Task","Status","Notes","Blocker","Solution","Created"], color="1e2a1a")
-    for i, p in enumerate(all_step_points, 2):
-        _xlsx_row(ws_sp, i, [
-            p["task_id"], p["task_title"], p["step_title"],
-            p["content"], p["status"] or "not_started",
-            p["notes"] or "", p["blocker"] or "", p["solution"] or "", p["created_at"],
-        ], alt=i % 2 == 0)
-    _auto_width(ws_sp)
-    ws_sp.freeze_panes = "A2"
 
     buf = io.BytesIO()
     wb.save(buf)

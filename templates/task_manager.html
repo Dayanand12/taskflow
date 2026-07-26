@@ -276,7 +276,7 @@ header{background:var(--surf);border-bottom:1px solid var(--border);padding:10px
   position:fixed; right:0; top:var(--hdr-h); bottom:0;
   width:var(--panel-w);
   background:var(--surf); border-left:1px solid var(--border);
-  z-index:70; display:flex; flex-direction:column;
+  z-index:320; display:flex; flex-direction:column;
   transform:translateX(100%); transition:transform .22s ease;
   overflow:hidden;
 }
@@ -577,8 +577,15 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 /* ── Meeting modal ────────────────────────────────────────────────────────── */
 #meeting-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center}
 #meeting-overlay.open{display:flex}
-#milestone-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center}
-#milestone-overlay.open{display:flex}
+#fc-edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:340;align-items:center;justify-content:center}
+#fc-edit-overlay.open{display:flex}
+#ai-settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:340;align-items:center;justify-content:center}
+#ai-settings-overlay.open{display:flex}
+.ai-status-box{border-radius:9px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:4px}
+.ai-status-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e}
+.ai-status-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444}
+.ai-status-pending{background:var(--surf2);border:1px solid var(--border);color:var(--txt2)}
+.ai-status-models{font-size:.7rem;color:var(--txt2);font-weight:400}
 .meeting-modal{background:var(--surf);border:1px solid var(--border);border-radius:13px;width:100%;max-width:500px;margin:14px;display:flex;flex-direction:column;overflow:hidden;max-height:90vh}
 .mtg-modal-head{padding:16px 18px 0;border-bottom:1px solid var(--border);padding-bottom:12px}
 .mtg-modal-title{font-size:.95rem;font-weight:700;margin-bottom:0;display:flex;align-items:center;gap:8px}
@@ -674,21 +681,9 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .tp-pt-card{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:7px 9px;display:flex;flex-direction:column;gap:4px}
 .tp-pt-txt{font-size:.76rem;color:var(--txt);line-height:1.35;word-break:break-word}
 .tp-pt-txt.done{text-decoration:line-through;opacity:.45}
-.tp-pt-note{font-size:.68rem;color:var(--txt3);font-style:italic}
-.tp-pt-blocker{font-size:.68rem;color:#f87171}
-.tp-pt-acts{display:flex;align-items:center;gap:4px;margin-top:2px}
-.tp-pt-status-lbl{font-size:.62rem;color:var(--txt3);flex:1}
-.tp-pt-act-btn{background:transparent;border:none;color:var(--txt3);padding:1px 5px;cursor:pointer;font-size:.7rem;border-radius:4px;transition:color .12s;font-family:inherit;line-height:1}
-.tp-pt-act-btn:hover{color:var(--accent)}
-.tp-pt-act-btn.del:hover{color:#f87171}
-.tp-pt-form{display:flex;flex-direction:column;gap:4px;padding:4px 0 2px}
 .tp-pt-inp{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--txt);padding:5px 8px;font-size:.74rem;outline:none;font-family:inherit;transition:border-color .15s}
 .tp-pt-inp:focus{border-color:var(--accent)}
 .tp-pt-inp::placeholder{color:var(--txt3)}
-.tp-pt-edit-inp{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--txt);padding:5px 8px;font-size:.74rem;outline:none;font-family:inherit;width:100%;resize:vertical;transition:border-color .15s}
-.tp-pt-edit-inp:focus{border-color:var(--accent)}
-.tp-pt-edit-sel{background:var(--bg);border:1px solid var(--border);color:var(--txt2);padding:4px 7px;border-radius:6px;font-size:.72rem;outline:none;font-family:inherit;width:100%}
-.step-mini-lbl{font-size:.62rem;color:var(--txt3);white-space:nowrap}
 .step-mini-lbl{font-size:.62rem;color:var(--txt3);white-space:nowrap}
 
 /* ── Workflow Flow View ───────────────────────────────────────────────────── */
@@ -973,6 +968,9 @@ header{box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,.04)}
 .ss-txt-in_progress{color:#60a5fa}
 .ss-txt-not_started{color:var(--txt3)}
 
+.tp-task-rollup{display:flex;gap:14px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-size:.76rem;color:var(--txt2);flex-wrap:wrap}
+.tp-rollup-warn{color:#f59e0b;font-weight:600}
+
 /* ── Collapsible step cards ─────────────────────────────────────────────────── */
 .tp-step-card.collapsed{background:var(--bg)}
 .tp-step-card.collapsed .tp-step-hdr{border-radius:8px}
@@ -1020,34 +1018,18 @@ body.sidebar-open #main-wrap{margin-right:252px}
 .dsb-none{font-size:.72rem;color:var(--txt3);padding:10px 12px;font-style:italic}
 .dsb-empty{font-size:.72rem;color:var(--txt3);padding:4px 8px}
 
-/* ── Milestones ─────────────────────────────────────────────────────────── */
-.milestone-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;padding:14px 18px}
-.milestone-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;cursor:pointer;transition:border-color .15s}
-.milestone-card:hover{border-color:var(--border2)}
-.milestone-card-hdr{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
-.milestone-title{font-weight:700;font-size:.92rem}
-.milestone-actions{display:flex;gap:2px;flex-shrink:0}
-.milestone-actions button{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:.8rem;padding:2px 5px;border-radius:5px}
-.milestone-actions button:hover{color:var(--txt);background:var(--surf2)}
-.milestone-meta{display:flex;align-items:center;gap:8px;font-size:.7rem;color:var(--txt2)}
-.milestone-status-pill{font-size:.6rem;font-weight:700;padding:2px 8px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px}
-.ms-not_started{background:#1e293b;color:#94a3b8}
-.ms-in_progress{background:#0f1e38;color:#60a5fa}
-.ms-completed{background:#061a10;color:#34d399}
-[data-theme="light"] .ms-not_started{background:#f1f5f9}
-[data-theme="light"] .ms-in_progress{background:#eff6ff}
-[data-theme="light"] .ms-completed{background:#ecfdf5}
-.milestone-progress-track{height:6px;border-radius:99px;background:var(--bg);overflow:hidden}
-.milestone-progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
-.milestone-progress-lbl{font-size:.68rem;color:var(--txt3)}
-.milestone-desc{font-size:.74rem;color:var(--txt2);line-height:1.4;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
-.milestone-add-wrap{padding:0 18px 14px}
-.milestone-empty{padding:40px 18px;text-align:center;color:var(--txt3);font-size:.85rem}
-
-.task-milestone{font-size:.65rem;color:#c084fc;background:#180f2b;padding:1px 6px;border-radius:5px;border:1px solid #a855f733}
-[data-theme="light"] .task-milestone{background:#faf5ff}
+.task-step{font-size:.65rem;color:#c084fc;background:#180f2b;padding:1px 6px;border-radius:5px;border:1px solid #a855f733;cursor:pointer}
+[data-theme="light"] .task-step{background:#faf5ff}
 .blocked-badge{font-size:.65rem;color:#f59e0b;background:#1e1608;padding:1px 6px;border-radius:5px;border:1px solid #f59e0b44;display:inline-flex;align-items:center;gap:3px}
 [data-theme="light"] .blocked-badge{background:#fffbeb}
+
+/* ── Step tasks (inside a workflow step) ───────────────────────────────── */
+.step-progress-mini{display:flex;align-items:center;gap:6px;margin:4px 0 6px}
+.step-progress-track{flex:1;height:5px;border-radius:99px;background:var(--bg);overflow:hidden}
+.step-progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .2s}
+.step-progress-lbl{font-size:.64rem;color:var(--txt3);white-space:nowrap}
+.step-task-list{display:flex;flex-direction:column;gap:5px;margin:4px 0}
+.step-task-add-row{display:flex;gap:5px;margin-top:2px}
 
 /* ── Dependencies tab (detail panel) ───────────────────────────────────── */
 .dep-section-lbl{font-size:.72rem;font-weight:600;color:var(--txt2);margin:14px 0 6px}
@@ -1059,6 +1041,75 @@ body.sidebar-open #main-wrap{margin-right:252px}
 .dep-add-row{display:flex;gap:6px;margin-top:4px}
 .dep-empty{font-size:.72rem;color:var(--txt3);font-style:italic;margin-bottom:4px}
 
+/* ── Flashcards ─────────────────────────────────────────────────────────── */
+.fc-layout{display:flex;height:calc(100vh - var(--hdr-h));overflow:hidden}
+.fc-sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.fc-cat-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:.82rem;color:var(--txt2)}
+.fc-cat-item:hover{background:var(--surf2)}
+.fc-cat-item.active{background:var(--accent);color:#fff}
+.fc-cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.fc-cat-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-cat-count{font-size:.68rem;opacity:.75}
+.fc-cat-del{background:none;border:none;color:inherit;opacity:0;cursor:pointer;font-size:.7rem;padding:0 2px;flex-shrink:0}
+.fc-cat-item:hover .fc-cat-del{opacity:.6}
+.fc-cat-del:hover{opacity:1!important}
+.fc-cat-add-row{display:flex;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+.fc-main{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
+.fc-toolbar{display:flex;gap:8px;align-items:center}
+.fc-search{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--txt);font-size:.82rem;outline:none}
+.fc-search:focus{border-color:var(--accent)}
+.fc-list{display:flex;flex-direction:column;gap:6px}
+.fc-row{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s}
+.fc-row:hover{border-color:var(--border2)}
+.fc-row-q{flex:1;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fc-row-cat{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;color:#fff}
+.fc-row-due{font-size:.62rem;color:#f59e0b;flex-shrink:0;font-weight:600}
+.fc-row-star{cursor:pointer;color:var(--txt3);flex-shrink:0;background:none;border:none;font-size:.9rem;padding:2px}
+.fc-row-star.on{color:#f59e0b}
+.fc-row-acts{display:flex;gap:2px;flex-shrink:0}
+.fc-row-act-btn{background:none;border:none;color:var(--txt3);cursor:pointer;padding:3px 5px;border-radius:5px;font-size:.75rem}
+.fc-row-act-btn:hover{color:var(--txt);background:var(--surf2)}
+.fc-empty{padding:60px 20px;text-align:center;color:var(--txt3)}
+
+.fc-review-hero{max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:18px}
+.fc-review-icon{font-size:3rem}
+.fc-review-title{font-size:1.3rem;font-weight:800}
+.fc-review-sub{color:var(--txt2);font-size:.88rem}
+.fc-review-cats{display:flex;flex-direction:column;gap:8px;text-align:left}
+.fc-review-cat-row{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 14px}
+.fc-review-cat-count{margin-left:auto;font-weight:700;color:var(--accent)}
+.fc-start-btn{background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit}
+.fc-start-btn:hover{background:var(--accent-h)}
+
+#fc-study{position:fixed;inset:0;z-index:330;background:var(--bg);display:none;flex-direction:column}
+#fc-study.open{display:flex}
+.fc-study-top{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
+.fc-study-progress{flex:1;font-size:.76rem;color:var(--txt3)}
+.fc-study-close{background:none;border:none;color:var(--txt3);font-size:1.1rem;cursor:pointer;padding:4px 8px}
+.fc-study-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;gap:22px;overflow-y:auto}
+.fc-study-cat{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:99px;color:#fff}
+.fc-study-card{max-width:680px;width:100%;text-align:center;display:flex;flex-direction:column;gap:20px}
+.fc-study-q{font-size:1.7rem;font-weight:700;line-height:1.4}
+.fc-study-divider{width:60px;height:2px;background:var(--border2);margin:0 auto}
+.fc-study-a{font-size:1.25rem;color:var(--txt2);line-height:1.5;white-space:pre-wrap}
+.fc-study-hint{font-size:.76rem;color:var(--txt3)}
+.fc-study-note-link{font-size:.76rem;color:var(--accent);cursor:pointer;text-decoration:underline}
+.fc-reveal-btn{background:var(--accent);border:none;color:#fff;padding:12px 30px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit}
+.fc-reveal-btn:hover{background:var(--accent-h)}
+.fc-rate-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.fc-rate-btn{border:none;color:#fff;padding:11px 20px;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:2px;align-items:center;min-width:88px}
+.fc-rate-btn small{font-weight:500;opacity:.85;font-size:.65rem}
+.fc-rate-forgot{background:#ef4444}
+.fc-rate-hard{background:#f59e0b}
+.fc-rate-good{background:#22c55e}
+.fc-rate-easy{background:#3b82f6}
+.fc-study-foot{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0}
+.fc-study-nav-btn{background:none;border:1px solid var(--border);color:var(--txt2);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;font-family:inherit}
+.fc-study-nav-btn:hover{border-color:var(--accent);color:var(--txt)}
+.fc-study-icon-btn{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:1rem;padding:6px}
+.fc-study-icon-btn.active{color:#f59e0b}
+.fc-complete{max-width:420px;margin:60px auto;text-align:center;display:flex;flex-direction:column;gap:14px}
+
 </style>
 </head>
 <body>
@@ -1069,8 +1120,8 @@ body.sidebar-open #main-wrap{margin-right:252px}
   <div class="view-tabs">
     <button class="view-tab-primary active" data-v="tasks"     onclick="goToTasks()">Tasks<span class="rem-badge" id="today-badge" style="display:none;background:#ef4444">0</span></button>
     <button class="view-tab-primary"        data-v="workflows"  onclick="switchView('workflows')">⚡ Workflows</button>
-    <button class="view-tab-primary"        data-v="milestones" onclick="switchView('milestones')">🎯 Milestones</button>
     <button class="view-tab-primary"        data-v="notes"      onclick="switchView('notes')">📓 Notes</button>
+    <button class="view-tab-primary"        data-v="flashcards" onclick="switchView('flashcards')">🧠 Flashcards</button>
     <span class="nav-divider"></span>
     <button class="view-tab active" data-v="list"      onclick="switchView('list')">≡ List</button>
     <button class="view-tab"        data-v="kanban"    onclick="switchView('kanban')">⊞ Board</button>
@@ -1098,6 +1149,7 @@ body.sidebar-open #main-wrap{margin-right:252px}
       <button class="more-item" onclick="openMeetingModal(null);closeMoreMenu()"><span class="more-item-icon">📅</span>Add meeting</button>
       <div class="more-sep"></div>
       <button class="more-item" onclick="exportTasks();closeMoreMenu()"><span class="more-item-icon">⬇</span>Export CSV</button>
+      <button class="more-item" onclick="openAiSettingsModal();closeMoreMenu()"><span class="more-item-icon">🤖</span>AI Settings</button>
       <button class="more-item" onclick="openShortcutModal();closeMoreMenu()"><span class="more-item-icon">⌨</span>Keyboard shortcuts</button>
       <button class="more-item" id="theme-btn" onclick="toggleTheme();closeMoreMenu()"><span class="more-item-icon">☀</span><span id="theme-lbl">Light mode</span></button>
     </div>
@@ -1186,10 +1238,68 @@ body.sidebar-open #main-wrap{margin-right:252px}
   <div id="view-calendar"  style="display:none" class="view-pad"></div>
   <div id="view-reminders" style="display:none" class="view-pad"></div>
   <div id="view-workflows"  style="display:none" class="view-pad"></div>
-  <div id="view-milestones" style="display:none" class="view-pad"></div>
   <div id="view-notes"      style="display:none"></div>
+  <div id="view-flashcards" style="display:none"></div>
 
 </div><!-- /main-wrap -->
+
+<!-- ── Flashcard study viewer (full-screen) ──────────────────────────────────── -->
+<div id="fc-study">
+  <div class="fc-study-top">
+    <button class="fc-study-close" onclick="fcCloseStudy()">← Back</button>
+    <div class="fc-study-progress" id="fc-study-progress"></div>
+    <button class="fc-study-icon-btn" id="fc-fav-btn" onclick="fcToggleFavoriteCurrent()" title="Favorite (F)">☆</button>
+    <button class="fc-study-icon-btn" onclick="fcEditCurrent()" title="Edit">✏</button>
+    <button class="fc-study-icon-btn" onclick="fcDeleteCurrent()" title="Delete">🗑</button>
+  </div>
+  <div class="fc-study-body" id="fc-study-body"></div>
+  <div class="fc-study-foot" id="fc-study-foot"></div>
+</div>
+
+<!-- ── Flashcard edit/create modal ───────────────────────────────────────────── -->
+<div id="fc-edit-overlay" onclick="if(event.target===this)fcCloseEditModal()">
+  <div class="meeting-modal">
+    <div class="mtg-modal-head">
+      <div class="mtg-modal-title">🧠 <span id="fc-modal-title-txt">New Flashcard</span></div>
+    </div>
+    <div class="mtg-modal-body">
+      <input type="hidden" id="fc-edit-id"/>
+      <label>Question *</label>
+      <textarea id="fc-edit-q" class="m-input" rows="2" placeholder="What is…?"></textarea>
+      <label>Answer *</label>
+      <textarea id="fc-edit-a" class="m-input" rows="3" placeholder="The answer…"></textarea>
+      <label>Category</label>
+      <select id="fc-edit-cat" class="m-input"><option value="">— Uncategorized —</option></select>
+    </div>
+    <div class="mtg-modal-foot">
+      <button class="btn-danger" id="fc-edit-del-btn" onclick="fcDeleteFromModal()" style="display:none">Delete</button>
+      <button class="btn-cancel" onclick="fcCloseEditModal()">Cancel</button>
+      <button class="btn-save"   onclick="fcSaveFromModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── AI Settings modal ──────────────────────────────────────────────────────── -->
+<div id="ai-settings-overlay" onclick="if(event.target===this)closeAiSettingsModal()">
+  <div class="meeting-modal">
+    <div class="mtg-modal-head">
+      <div class="mtg-modal-title">🤖 AI Settings</div>
+    </div>
+    <div class="mtg-modal-body">
+      <label>Ollama URL</label>
+      <input type="text" id="ai-url-inp" class="m-input" placeholder="http://localhost:11434"/>
+      <label>Model</label>
+      <select id="ai-model-select" class="m-input" style="display:none"></select>
+      <input type="text" id="ai-model-inp" class="m-input" placeholder="qwen3:8b"/>
+      <button class="hdr-btn" style="margin-top:12px;width:100%" onclick="aiTestConnection()" id="ai-test-btn">🔌 Test Connection</button>
+      <div id="ai-status-box" style="margin-top:10px"></div>
+    </div>
+    <div class="mtg-modal-foot">
+      <button class="btn-cancel" onclick="closeAiSettingsModal()">Close</button>
+      <button class="btn-save"   onclick="aiSaveSettings()">Save</button>
+    </div>
+  </div>
+</div>
 
 <!-- ── Bulk bar ────────────────────────────────────────────────────────────── -->
 <div id="bulk-bar">
@@ -1300,39 +1410,6 @@ body.sidebar-open #main-wrap{margin-right:252px}
   </div>
 </div>
 
-<!-- ── Milestone modal ─────────────────────────────────────────────────────── -->
-<div id="milestone-overlay" onclick="if(event.target===this)closeMilestoneModal()">
-  <div class="meeting-modal">
-    <div class="mtg-modal-head">
-      <div class="mtg-modal-title">🎯 <span id="ms-modal-title-txt">New Milestone</span></div>
-    </div>
-    <div class="mtg-modal-body">
-      <input type="hidden" id="ms-id"/>
-      <label>Title *</label>
-      <input type="text" id="ms-title" class="m-input" placeholder="e.g. Data Layer, Strategy Engine, Live Deployment…"/>
-
-      <div class="mtg-grid2" style="margin-top:4px">
-        <div><label>Target date</label><input type="date" id="ms-target-date" class="m-input"/></div>
-        <div>
-          <label>Status</label>
-          <select id="ms-status" class="m-input">
-            <option value="not_started">Not Started</option>
-            <option value="in_progress">In Progress</option>
-            <option value="completed">Completed</option>
-          </select>
-        </div>
-      </div>
-      <label>Description</label>
-      <textarea id="ms-desc" class="m-input" rows="3" placeholder="What does this phase cover?" style="resize:vertical"></textarea>
-    </div>
-    <div class="mtg-modal-foot">
-      <button class="btn-danger" id="ms-del-btn" onclick="deleteMilestoneFromModal()" style="display:none">Delete</button>
-      <button class="btn-cancel" onclick="closeMilestoneModal()">Cancel</button>
-      <button class="btn-save"   onclick="saveMilestone()">Save</button>
-    </div>
-  </div>
-</div>
-
 <!-- ── Calendar day popup ──────────────────────────────────────────────────── -->
 <div id="calday-overlay" onclick="if(event.target===this)closeCalDay()">
   <div class="calday-box">
@@ -1419,11 +1496,18 @@ body.sidebar-open #main-wrap{margin-right:252px}
         <input type="text" id="p-project" class="pf-input" placeholder="e.g. Website"/>
       </div>
       <div>
-        <span class="pf-label">Milestone</span>
-        <select id="p-milestone" class="pf-input">
-          <option value="">— No milestone —</option>
+        <span class="pf-label">Workflow</span>
+        <select id="p-workflow" class="pf-input" onchange="onPanelWorkflowPick()">
+          <option value="">— No workflow —</option>
         </select>
       </div>
+    </div>
+
+    <div style="margin-top:11px" id="p-step-row">
+      <span class="pf-label">Step</span>
+      <select id="p-step" class="pf-input" disabled>
+        <option value="">— Select workflow first —</option>
+      </select>
     </div>
 
     <div class="pf-row3" style="margin-top:11px">
@@ -1658,9 +1742,9 @@ const TC = {
 };
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let allTasks=[], allTags=[], allMeetings=[], allMilestones=[];
+let allTasks=[], allTags=[], allMeetings=[];
+let allFcCategories=[], allFlashcards=[];
 let currentFilter='all', currentSort='newest', searchQuery='';
-let currentMilestoneFilter=null;
 let activeTagIds=new Set(), currentView='list';
 let currentTypeFilter='all';
 let groupByProject=false;
@@ -1675,7 +1759,7 @@ let wfDoneOpen=false;
 let taskSubView=localStorage.getItem('task_sub_view')||'list';
 let sidebarOpen=localStorage.getItem('daily_sidebar')!=='false';
 // ── Task tracker state ────────────────────────────────────────────────────────
-let taskPageId=null, taskPageSteps=[], tpOpenForms=new Set();
+let taskPageId=null, taskPageSteps=[];
 let tpCollapsedSteps=new Set();
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -1683,8 +1767,10 @@ let tpCollapsedSteps=new Set();
   applyTheme(localStorage.getItem('theme')||'dark');
   const v=localStorage.getItem('view')||'list';
   const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth();
-  await loadAll(); // loadAll now also calls loadStandaloneReminders
+  await Promise.all([loadAll(), loadNotesFromBackend(), loadFlashcards(), loadAiSettings()]); // loadAll also calls loadStandaloneReminders
   switchView(v,false);
+  const savedTaskPageId=parseInt(localStorage.getItem('task_page_id'));
+  if(savedTaskPageId&&allTasks.some(t=>t.id===savedTaskPageId)) await openTaskPage(savedTaskPageId);
   const dsbBtn=document.getElementById('dsb-toggle-btn');
   if(dsbBtn) dsbBtn.classList.toggle('active',sidebarOpen);
   requestNotifPerm(); startReminderPoll();
@@ -1692,10 +1778,21 @@ let tpCollapsedSteps=new Set();
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 async function loadAll(){
-  const [tR,gR,mR,msR]=await Promise.all([fetch('/tasks'),fetch('/tags'),fetch('/meetings'),fetch('/milestones')]);
-  allTasks=await tR.json(); allTags=await gR.json(); allMeetings=await mR.json(); allMilestones=await msR.json();
+  const [tR,gR,mR]=await Promise.all([fetch('/tasks'),fetch('/tags'),fetch('/meetings')]);
+  allTasks=await tR.json(); allTags=await gR.json(); allMeetings=await mR.json();
   await loadStandaloneReminders();
   renderAll();
+  if(taskPageId&&document.getElementById('task-page')?.classList.contains('open')){
+    const r=await fetch(`/tasks/${taskPageId}/steps`);
+    taskPageSteps=await r.json();
+    const task=allTasks.find(t=>t.id===taskPageId);
+    if(task){
+      _renderTpTopbar(task,taskPageSteps);
+      _renderTpProgress(taskPageSteps);
+      _renderTpTrack(taskPageSteps);
+      if(tpCurrentView==='flow') renderFlowView(taskPageSteps);
+    }
+  }
 }
 function renderAll(){
   renderDashboard(); updateCounts(); renderTagBar();
@@ -1706,7 +1803,6 @@ function renderAll(){
   if(currentView==='next7')      renderNext7();
   if(currentView==='reminders')  renderReminders();
   if(currentView==='workflows')  renderWorkflows();
-  if(currentView==='milestones') renderMilestones();
   updateProgressStrip();
   const TASK_VIEWS_LOAD=['today','next7','list','kanban','calendar','reminders'];
   if(sidebarOpen&&TASK_VIEWS_LOAD.includes(currentView)) renderDailySidebar();
@@ -1732,12 +1828,12 @@ function updateProgressStrip(){
   if(!showStrip) return;
   // Count tasks relevant to the current smart view
   const viewTasks=currentView==='today'
-    ? allTasks.filter(t=>t.due_date===today&&t.task_type!=='workflow')
-    : allTasks.filter(t=>t.due_date&&t.due_date>=today&&t.due_date<=next7Str()&&t.task_type!=='workflow');
+    ? allTasks.filter(t=>t.due_date===today&&t.task_type!=='workflow'&&!t.step_id)
+    : allTasks.filter(t=>t.due_date&&t.due_date>=today&&t.due_date<=next7Str()&&t.task_type!=='workflow'&&!t.step_id);
   const total=viewTasks.length;
   const done=viewTasks.filter(t=>t.status==='completed').length;
   const pct=total?Math.round(done/total*100):0;
-  const overdue=allTasks.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)&&t.task_type!=='workflow').length;
+  const overdue=allTasks.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)&&t.task_type!=='workflow'&&!t.step_id).length;
   const lbl=currentView==='today'?'tasks due today':'tasks in next 7 days';
   const cntEl=document.getElementById('ps-today-count');
   if(cntEl) cntEl.textContent=`${done}/${total} ${lbl}`;
@@ -1777,7 +1873,7 @@ function switchView(v,save=true){
   document.body.classList.toggle('sidebar-open',showDsb);
   if(showDsb) renderDailySidebar();
   // View containers
-  ['today','next7','list','kanban','calendar','reminders','workflows','milestones','notes'].forEach(n=>{
+  ['today','next7','list','kanban','calendar','reminders','workflows','notes','flashcards'].forEach(n=>{
     const el=document.getElementById('view-'+n);
     if(el) el.style.display=n===v?'':'none';
   });
@@ -1801,8 +1897,8 @@ function switchView(v,save=true){
   if(v==='next7')     renderNext7();
   if(v==='reminders')  renderReminders();
   if(v==='workflows')  renderWorkflows();
-  if(v==='milestones') renderMilestones();
   if(v==='notes')      renderNotes();
+  if(v==='flashcards') renderFlashcards();
   updateProgressStrip();
 }
 
@@ -1811,91 +1907,29 @@ function goToTasks(){
   switchView(TASK_VIEWS.includes(currentView)?'today':taskSubView);
 }
 
-// ── Milestones ──────────────────────────────────────────────────────────────
-const MS_LABEL={not_started:'Not Started',in_progress:'In Progress',completed:'Completed'};
-function renderMilestones(){
-  const el=document.getElementById('view-milestones');
-  if(!allMilestones.length){
-    el.innerHTML=`<div class="milestone-add-wrap" style="padding-top:14px">
-      <button class="add-task-btn" onclick="openMilestoneModal(null)">＋ New Milestone</button>
-    </div>
-    <div class="milestone-empty">No milestones yet.<br>Group tasks into phases (e.g. Data Layer, Strategy Engine, Deployment) to track progress across your whole plan.</div>`;
+// ── Workflow / Step picker (task panel) ───────────────────────────────────────
+function renderWorkflowOptions(selectedWorkflowId){
+  const sel=document.getElementById('p-workflow');
+  if(!sel)return;
+  const workflows=allTasks.filter(t=>t.task_type==='workflow');
+  sel.innerHTML='<option value="">— No workflow —</option>'+
+    workflows.map(w=>`<option value="${w.id}">${esc(w.title)}</option>`).join('');
+  sel.value=selectedWorkflowId||'';
+}
+async function onPanelWorkflowPick(preselectStepId){
+  const wfId=document.getElementById('p-workflow').value;
+  const stepSel=document.getElementById('p-step');
+  if(!wfId){
+    stepSel.innerHTML='<option value="">— Select workflow first —</option>';
+    stepSel.disabled=true;
     return;
   }
-  const today=todayStr();
-  const cards=allMilestones.map(m=>{
-    const pct=m.task_total?Math.round(m.task_done/m.task_total*100):0;
-    const overdue=m.target_date&&m.target_date<today&&m.status!=='completed';
-    return `<div class="milestone-card" onclick="filterByMilestone(${m.id})">
-      <div class="milestone-card-hdr">
-        <span class="milestone-title">${esc(m.title)}</span>
-        <div class="milestone-actions" onclick="event.stopPropagation()">
-          <button onclick="openMilestoneModal(${m.id})" title="Edit">✎</button>
-        </div>
-      </div>
-      <div class="milestone-meta">
-        <span class="milestone-status-pill ms-${m.status}">${MS_LABEL[m.status]||m.status}</span>
-        ${m.target_date?`<span class="${overdue?'due-o':''}">${overdue?'⚠ ':'🎯 '}${fmtDue(m.target_date)}</span>`:''}
-      </div>
-      ${m.description?`<div class="milestone-desc">${esc(m.description)}</div>`:''}
-      <div class="milestone-progress-track"><div class="milestone-progress-fill" style="width:${pct}%"></div></div>
-      <div class="milestone-progress-lbl">${m.task_done}/${m.task_total} tasks complete${m.task_total?` · ${pct}%`:''}</div>
-    </div>`;
-  }).join('');
-  el.innerHTML=`
-    <div class="milestone-add-wrap" style="padding-top:14px">
-      <button class="add-task-btn" onclick="openMilestoneModal(null)">＋ New Milestone</button>
-    </div>
-    <div class="milestone-grid">${cards}</div>`;
-}
-function filterByMilestone(id){
-  currentMilestoneFilter=id;
-  switchView('list');
-}
-function openMilestoneModal(id){
-  const m=id?allMilestones.find(x=>x.id===id):null;
-  document.getElementById('ms-id').value=id||'';
-  document.getElementById('ms-modal-title-txt').textContent=id?'Edit Milestone':'New Milestone';
-  document.getElementById('ms-title').value=m?.title||'';
-  document.getElementById('ms-target-date').value=m?.target_date||'';
-  document.getElementById('ms-status').value=m?.status||'not_started';
-  document.getElementById('ms-desc').value=m?.description||'';
-  document.getElementById('ms-del-btn').style.display=id?'':'none';
-  document.getElementById('milestone-overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('ms-title').focus(),60);
-}
-function closeMilestoneModal(){document.getElementById('milestone-overlay').classList.remove('open');}
-async function saveMilestone(){
-  const title=document.getElementById('ms-title').value.trim();
-  if(!title){document.getElementById('ms-title').focus();return;}
-  const id=document.getElementById('ms-id').value;
-  const body={
-    title,
-    target_date:document.getElementById('ms-target-date').value||null,
-    status:document.getElementById('ms-status').value||'not_started',
-    description:document.getElementById('ms-desc').value.trim(),
-  };
-  const res=await fetch(id?`/milestones/${id}`:'/milestones',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  await res.json();
-  await loadAll();
-  closeMilestoneModal();
-  showToast('🎯 Milestone saved');
-}
-async function deleteMilestoneFromModal(){
-  const id=document.getElementById('ms-id').value;
-  if(!id)return;
-  if(!confirm('Delete this milestone? Tasks assigned to it will be unassigned, not deleted.'))return;
-  await fetch(`/milestones/${id}`,{method:'DELETE'});
-  closeMilestoneModal();
-  await loadAll();
-  showToast('Milestone deleted');
-}
-function renderMilestoneOptions(selectedId){
-  const sel=document.getElementById('p-milestone');
-  if(!sel)return;
-  sel.innerHTML='<option value="">— No milestone —</option>'+
-    allMilestones.map(m=>`<option value="${m.id}">${esc(m.title)}</option>`).join('');
-  sel.value=selectedId||'';
+  stepSel.disabled=false;
+  stepSel.innerHTML='<option value="">Loading…</option>';
+  const steps=await(await fetch(`/tasks/${wfId}/steps`)).json();
+  stepSel.innerHTML='<option value="">— No step —</option>'+
+    steps.map(s=>`<option value="${s.id}">${esc(s.title)}</option>`).join('');
+  stepSel.value=preselectStepId||'';
 }
 
 function toggleDailySidebar(){
@@ -1926,14 +1960,21 @@ function renderDailySidebar(){
   const mEl=document.getElementById('dsb-meetings');
   if(mEl) mEl.innerHTML=`<div class="dsb-widget-title">📅 Today's Meetings</div>${mtgHtml}`;
 
-  // Reminders widget (due today or overdue, not done)
-  const dueRems=(allReminders||[]).filter(r=>r.due_date&&r.due_date<=today&&!r.is_done).sort((a,b)=>a.due_date.localeCompare(b.due_date));
+  // Reminders widget (due today or overdue, still active)
+  const nowStr=new Date().toISOString().replace('T',' ').substring(0,19);
+  const taskRems=allTasks
+    .filter(t=>t.reminder&&!['completed','cancelled'].includes(t.status))
+    .map(t=>({title:t.title,remind_at:t.reminder.remind_at}));
+  const standaloneRems=(allStandaloneReminders||[]).map(r=>({title:r.title,remind_at:r.remind_at}));
+  const dueRems=[...taskRems,...standaloneRems]
+    .filter(r=>r.remind_at&&r.remind_at.substring(0,10)<=today)
+    .sort((a,b)=>a.remind_at.localeCompare(b.remind_at));
   const remHtml=dueRems.length
-    ?dueRems.map(r=>`<div class="dsb-row${r.due_date<today?' dsb-row-late':''}">
+    ?dueRems.map(r=>{const isLate=r.remind_at<nowStr;return `<div class="dsb-row${isLate?' dsb-row-late':''}">
         <span class="dsb-row-dot"></span>
         <span class="dsb-row-title">${esc(r.title)}</span>
-        ${r.due_date<today?'<span class="dsb-late-tag">overdue</span>':''}
-      </div>`).join('')
+        ${isLate?'<span class="dsb-late-tag">overdue</span>':''}
+      </div>`;}).join('')
     :'<div class="dsb-none">No pending reminders</div>';
   const rEl=document.getElementById('dsb-reminders');
   if(rEl) rEl.innerHTML=`<div class="dsb-widget-title">🔔 Reminders</div>${remHtml}`;
@@ -1941,19 +1982,20 @@ function renderDailySidebar(){
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
+  const standalone=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id);
   const counts=Object.fromEntries(Object.keys(SL).map(s=>[s,0]));
-  allTasks.forEach(t=>{if(counts[t.status]!==undefined)counts[t.status]++;});
-  const total=allTasks.length, done=counts.completed, pct=total?Math.round(done/total*100):0;
+  standalone.forEach(t=>{if(counts[t.status]!==undefined)counts[t.status]++;});
+  const total=standalone.length, done=counts.completed, pct=total?Math.round(done/total*100):0;
   const today=todayStr();
-  const overdue=allTasks.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
+  const overdue=standalone.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
   const statCards=Object.entries(SL).map(([s,l])=>`
     <div class="stat-card sc-${s} ${currentFilter===s?'af':''}" onclick="setFilterCard('${s}')">
       <div class="stat-count">${counts[s]}</div><div class="stat-label">${l}</div>
     </div>`).join('');
-  const hi=allTasks.filter(t=>t.priority==='high'&&!['completed','cancelled'].includes(t.status));
+  const hi=standalone.filter(t=>t.priority==='high'&&!['completed','cancelled'].includes(t.status));
   const byP=arr=>[...arr].sort((a,b)=>PO[b.priority]-PO[a.priority]);
-  const todoT=byP(allTasks.filter(t=>t.status==='todo'));
-  const inPT =byP(allTasks.filter(t=>t.status==='in_process'));
+  const todoT=byP(standalone.filter(t=>t.status==='todo'));
+  const inPT =byP(standalone.filter(t=>t.status==='in_process'));
   function miniList(tasks){
     if(!tasks.length) return '<div class="dash-empty">No tasks</div>';
     return tasks.slice(0,5).map(t=>{
@@ -1989,15 +2031,16 @@ function renderDashboard(){
 
 // ── Counts & tag bar ──────────────────────────────────────────────────────────
 function updateCounts(){
-  const c={all:allTasks.length,...Object.fromEntries(Object.keys(SL).map(s=>[s,0]))};
-  allTasks.forEach(t=>{if(c[t.status]!==undefined)c[t.status]++;});
+  const standalone=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id);
+  const c={all:standalone.length,...Object.fromEntries(Object.keys(SL).map(s=>[s,0]))};
+  standalone.forEach(t=>{if(c[t.status]!==undefined)c[t.status]++;});
   Object.entries(c).forEach(([s,n])=>{const el=document.getElementById('cnt-'+s);if(el)el.textContent=n;});
   updateRemBadge();
   updateTodayBadge();
 }
 function updateTodayBadge(){
   const today=todayStr();
-  const n=allTasks.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
+  const n=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
   const badge=document.getElementById('today-badge');
   if(badge){badge.style.display=n?'':'none';badge.textContent=n>9?'9+':String(n);}
 }
@@ -2027,9 +2070,8 @@ function toggleTagF(id){activeTagIds.has(id)?activeTagIds.delete(id):activeTagId
 // ── Filtering / sorting ───────────────────────────────────────────────────────
 function getVisible(overrideFilter){
   const filter=overrideFilter||currentFilter;
-  let tasks=(filter==='all'?allTasks:allTasks.filter(t=>t.status===filter)).filter(t=>t.task_type!=='workflow');
+  let tasks=(filter==='all'?allTasks:allTasks.filter(t=>t.status===filter)).filter(t=>t.task_type!=='workflow'&&!t.step_id);
   if(currentTypeFilter!=='all') tasks=tasks.filter(t=>(t.task_type||'general')===currentTypeFilter);
-  if(currentMilestoneFilter) tasks=tasks.filter(t=>t.milestone_id===currentMilestoneFilter);
   if(activeTagIds.size) tasks=tasks.filter(t=>t.tags&&t.tags.some(tg=>activeTagIds.has(tg.id)));
   if(searchQuery){const q=searchQuery.toLowerCase();tasks=tasks.filter(t=>t.title.toLowerCase().includes(q)||(t.description||'').toLowerCase().includes(q));}
   return [...tasks].sort((a,b)=>{
@@ -2072,7 +2114,6 @@ function renderListToolbar(){
   const chips=[];
   if(currentFilter!=='all') chips.push({label:SL[currentFilter],rm:`setFilter('all',document.querySelector('.filter-btn[data-s="all"]'))`});
   if(currentTypeFilter!=='all') chips.push({label:(TC[currentTypeFilter]?.icon||'')+' '+TC[currentTypeFilter]?.label,rm:`setTypeFilter('all',document.querySelector('.type-btn[data-tp="all"]'))`});
-  if(currentMilestoneFilter){const ms=allMilestones.find(m=>m.id===currentMilestoneFilter);if(ms)chips.push({label:'🎯 '+ms.title,rm:`clearMilestoneFilter()`});}
   activeTagIds.forEach(id=>{const tg=allTags.find(t=>t.id===id);if(tg)chips.push({label:tg.name,rm:`toggleTagF(${id})`});});
   if(searchQuery) chips.push({label:`"${searchQuery}"`,rm:`clearSearch()`});
   const hasF=chips.length>0;
@@ -2089,9 +2130,8 @@ function toggleCompact(){
   document.getElementById('view-list').classList.toggle('compact-list',compactMode);
   renderListToolbar();
 }
-function clearMilestoneFilter(){currentMilestoneFilter=null;renderAll();}
 function clearAllFilters(){
-  currentFilter='all';currentTypeFilter='all';currentMilestoneFilter=null;activeTagIds.clear();searchQuery='';
+  currentFilter='all';currentTypeFilter='all';activeTagIds.clear();searchQuery='';
   document.getElementById('search').value='';
   document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.s==='all'));
   document.querySelectorAll('.type-btn').forEach(b=>{
@@ -2103,7 +2143,7 @@ function clearAllFilters(){
 function clearSearch(){searchQuery='';document.getElementById('search').value='';renderAll();}
 
 // ── Card HTML builder ─────────────────────────────────────────────────────────
-function cardHtml(t,today,showPomo=false,clickFn='openPanel'){
+function cardHtml(t,today,showPomo=false,clickFn='openPanel',hideStep=false){
   const isDone=['completed','cancelled'].includes(t.status);
   const isRun=!!t.active_timer_since;
   const due=dueBadge(t,today);
@@ -2132,7 +2172,7 @@ function cardHtml(t,today,showPomo=false,clickFn='openPanel'){
         ${t.description?`<div class="task-desc">${esc(t.description)}</div>`:''}
         <div class="task-foot">
           ${t.project?`<span class="task-project">📁 ${esc(t.project)}</span>`:''}
-          ${t.milestone?`<span class="task-milestone" onclick="event.stopPropagation();filterByMilestone(${t.milestone.id})">🎯 ${esc(t.milestone.title)}</span>`:''}
+          ${t.step&&!hideStep?`<span class="task-step" onclick="event.stopPropagation();openTaskPage(${t.step.workflow_id})" title="${esc(t.step.workflow_title)}">📍 ${esc(t.step.title)}</span>`:''}
           ${t.is_blocked&&!isDone?`<span class="blocked-badge" title="Blocked by: ${esc((t.depends_on||[]).filter(d=>!['completed','cancelled'].includes(d.status)).map(d=>d.title).join(', '))}">🔒 Blocked</span>`:''}
           ${typeBadge}${estHtml}${timeHtml}${recurHtml}
           ${tagHtml}
@@ -2282,9 +2322,9 @@ function renderToday(){
   const el=document.getElementById('view-today');
   if(!el)return;
   const today=todayStr();
-  const overdue =allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date&&t.due_date<today &&!['completed','cancelled'].includes(t.status));
-  const todayT  =allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date===today            &&!['completed','cancelled'].includes(t.status));
-  const inProc  =allTasks.filter(t=>t.task_type!=='workflow'&&t.status==='in_process'&&(!t.due_date||t.due_date>today));
+  const overdue =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.due_date<today &&!['completed','cancelled'].includes(t.status));
+  const todayT  =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date===today            &&!['completed','cancelled'].includes(t.status));
+  const inProc  =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.status==='in_process'&&(!t.due_date||t.due_date>today));
   const realTodayMtg=allMeetings.filter(m=>m.date===today&&!['cancelled'].includes(m.status));
   const virtualTodayMtg=[];
   allMeetings.filter(m=>m.recurrence&&m.recurrence!=='none'&&!['cancelled','completed'].includes(m.status)&&m.date!==today).forEach(m=>{
@@ -2324,8 +2364,8 @@ function renderNext7(){
   const today=todayStr();
   const days=[];
   for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()+i);days.push(d.toISOString().split('T')[0]);}
-  const overdue=allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status));
-  const noDate =allTasks.filter(t=>t.task_type!=='workflow'&&!t.due_date&&!['completed','cancelled'].includes(t.status));
+  const overdue=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status));
+  const noDate =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&!t.due_date&&!['completed','cancelled'].includes(t.status));
 
   function dayLabel(ds){
     const d=new Date(ds+'T00:00:00');
@@ -2349,9 +2389,9 @@ function renderNext7(){
 
   let html=section('Overdue',overdue,'section-overdue');
   days.forEach(ds=>{
-    const realDayTasks=allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date===ds&&!['completed','cancelled'].includes(t.status));
+    const realDayTasks=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date===ds&&!['completed','cancelled'].includes(t.status));
     const virtualDayTasks=[];
-    allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)&&t.due_date!==ds).forEach(t=>{
+    allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)&&t.due_date!==ds).forEach(t=>{
       if(getOccurrenceDates(t.due_date,t.recurrence,ds,ds).includes(ds)&&![...realDayTasks,...virtualDayTasks].some(r=>r.title===t.title&&r.recurrence===t.recurrence))
         virtualDayTasks.push({...t,_virtual:true,due_date:ds});
     });
@@ -2367,7 +2407,7 @@ function renderKanban(){
   const el=document.getElementById('view-kanban');
   const today=todayStr();
   el.innerHTML=`<div class="kanban-board">${Object.entries(SL).map(([s,label])=>{
-    const tasks=[...allTasks.filter(t=>t.status===s&&t.task_type!=='workflow')].sort((a,b)=>PO[b.priority]-PO[a.priority]);
+    const tasks=[...allTasks.filter(t=>t.status===s&&t.task_type!=='workflow'&&!t.step_id)].sort((a,b)=>PO[b.priority]-PO[a.priority]);
     return `<div class="kanban-col" ondragover="kDragOver(event)" ondrop="kDrop(event,'${s}')" ondragleave="kDragLeave(event)">
       <div class="kcol-hdr">
         <span class="sdot" style="background:${SC[s]};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
@@ -2385,7 +2425,7 @@ function kCardHtml(t,today){
   const est=t.estimated_minutes?`<span class="kcard-sub">⏳${fmtMin(t.estimated_minutes)}</span>`:'';
   const recur=t.recurrence&&t.recurrence!=='none'?`<span class="kcard-sub" style="color:#a78bfa">↻</span>`:'';
   const blocked=t.is_blocked&&!['completed','cancelled'].includes(t.status)?`<span class="kcard-sub" style="color:#f59e0b" title="Blocked">🔒</span>`:'';
-  const ms=t.milestone?`<span class="kcard-sub" style="color:#c084fc" title="${esc(t.milestone.title)}">🎯 ${esc(t.milestone.title)}</span>`:'';
+  const ms=t.step?`<span class="kcard-sub" style="color:#c084fc" title="${esc(t.step.workflow_title)}">📍 ${esc(t.step.title)}</span>`:'';
   return `<div class="kcard kprio-${t.priority}" draggable="true" data-id="${t.id}"
     onclick="openPanel(${t.id})"
     ondragstart="kDragStart(event,${t.id})" ondragend="kDragEnd(event)">
@@ -2436,12 +2476,12 @@ function renderCalendar(){
   const first=new Date(calYear,calMonth,1),last=new Date(calYear,calMonth+1,0);
   const startDow=(first.getDay()+6)%7,daysInMonth=last.getDate();
   const taskMap={},mtgMap={};
-  allTasks.filter(t=>t.due_date&&t.task_type!=='workflow').forEach(t=>{if(!taskMap[t.due_date])taskMap[t.due_date]=[];taskMap[t.due_date].push(t);});
+  allTasks.filter(t=>t.due_date&&t.task_type!=='workflow'&&!t.step_id).forEach(t=>{if(!taskMap[t.due_date])taskMap[t.due_date]=[];taskMap[t.due_date].push(t);});
   allMeetings.forEach(m=>{if(!mtgMap[m.date])mtgMap[m.date]=[];mtgMap[m.date].push(m);});
   const monthStart=`${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
   const monthEnd=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
   // Virtual future occurrences for recurring tasks (active only)
-  allTasks.filter(t=>t.task_type!=='workflow'&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)).forEach(t=>{
+  allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)).forEach(t=>{
     getOccurrenceDates(t.due_date,t.recurrence,monthStart,monthEnd).forEach(ds=>{
       if(ds===t.due_date)return;
       if(!(taskMap[ds]||[]).some(r=>r.title===t.title&&r.recurrence===t.recurrence)){
@@ -2563,7 +2603,7 @@ document.addEventListener('click',e=>{
 });
 
 // ── Right detail panel ────────────────────────────────────────────────────────
-function openPanel(id,prefillDate=null){
+async function openPanel(id,prefillDate=null){
   panelTaskId=id;
   panelTab='details';
   // Reset tabs
@@ -2593,7 +2633,13 @@ function openPanel(id,prefillDate=null){
     ttSel.disabled=false;
     ttSel.value=task?.task_type??'general';
   }
-  renderMilestoneOptions(task?.milestone_id??'');
+  renderWorkflowOptions(task?.step?.workflow_id??'');
+  if(task?.step){
+    await onPanelWorkflowPick(task.step_id);
+  }else{
+    document.getElementById('p-step').innerHTML='<option value="">— Select workflow first —</option>';
+    document.getElementById('p-step').disabled=true;
+  }
 
   // Status inline row (quick badge)
   document.getElementById('panel-status-row').innerHTML = task
@@ -2653,7 +2699,7 @@ async function savePanel(){
     project:document.getElementById('p-project').value.trim()||null,
     recurrence:document.getElementById('p-recurrence').value||'none',
     task_type:document.getElementById('p-task-type').value||'general',
-    milestone_id:document.getElementById('p-milestone').value||null,
+    step_id:document.getElementById('p-step').value||null,
   };
   const res=await fetch(id?`/tasks/${id}`:'/tasks',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   const saved=await res.json();
@@ -3432,8 +3478,7 @@ async function quickAddToday(e){
 // ── Task Tracker ──────────────────────────────────────────────────────────────
 async function openTaskPage(tid){
   taskPageId=tid;
-  tpOpenForms.clear();
-  tpCurrentView='flow';
+  tpCurrentView=localStorage.getItem('task_page_view')||'flow';
   const task=allTasks.find(t=>t.id===tid);
   if(!task)return;
   const r=await fetch(`/tasks/${tid}/steps`);
@@ -3443,11 +3488,13 @@ async function openTaskPage(tid){
   document.body.style.overflow='hidden';
   document.getElementById('detail-panel').classList.remove('open');
   document.getElementById('main-wrap').classList.remove('panel-open');
+  localStorage.setItem('task_page_id',tid);
 }
 
 function closeTaskPage(){
   document.getElementById('task-page').classList.remove('open');
   document.body.style.overflow='';
+  localStorage.removeItem('task_page_id');
 }
 
 function _renderTaskPage(task,steps){
@@ -3484,6 +3531,19 @@ function _renderTpProgress(steps){
   const pct=Math.round(done/total*100);
   const segs=steps.map(s=>`<div class="tp-seg ss-${s.status||'not_started'}" title="${esc(s.title)}"></div>`).join('');
   const names=steps.map(s=>`<div class="tp-seg-name ss-txt-${s.status||'not_started'}" title="${esc(s.title)}">${esc(s.title.length>14?s.title.slice(0,13)+'…':s.title)}</div>`).join('');
+
+  const allWfTasks=steps.flatMap(s=>s.tasks||[]);
+  const today=todayStr();
+  const taskTotal=allWfTasks.length;
+  const taskDone=allWfTasks.filter(t=>t.status==='completed').length;
+  const blockedCount=allWfTasks.filter(t=>t.is_blocked&&!['completed','cancelled'].includes(t.status)).length;
+  const overdueCount=allWfTasks.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
+  const taskStatsHtml=taskTotal?`<div class="tp-task-rollup">
+    <span>📋 ${taskDone}/${taskTotal} tasks done</span>
+    ${blockedCount?`<span class="tp-rollup-warn">🔒 ${blockedCount} blocked</span>`:''}
+    ${overdueCount?`<span class="tp-rollup-warn">⚠ ${overdueCount} overdue</span>`:''}
+  </div>`:'';
+
   el.innerHTML=`<div class="tp-prog-section">
     <div class="tp-prog-top">
       <div class="tp-pct-big">${pct}%</div>
@@ -3494,6 +3554,7 @@ function _renderTpProgress(steps){
     </div>
     <div class="tp-seg-bar">${segs}</div>
     <div class="tp-seg-names">${names}</div>
+    ${taskStatsHtml}
   </div>`;
 }
 
@@ -3523,29 +3584,22 @@ function _renderTpTrack(steps){
 }
 
 function _tpStepCardHtml(s){
-  const isOpen=tpOpenForms.has(s.id);
   const isCollapsed=tpCollapsedSteps.has(s.id);
-  const pts=(s.points||[]);
-  const ptsHtml=isCollapsed?'':(pts.map(p=>_tpPointCardHtml(p,s.id)).join(''));
+  const today=todayStr();
+  const tasks=(s.tasks||[]);
+  const tasksHtml=isCollapsed?'':tasks.map(t=>cardHtml(t,today,false,'openPanel',true)).join('');
   const STATUS_ICON={'not_started':'⬜','in_progress':'🔄','completed':'✅'};
   const sIcon=STATUS_ICON[s.status||'not_started']||'⬜';
-  const form=(!isCollapsed&&isOpen)?`<div class="tp-pt-form">
-    <textarea class="tp-pt-inp" id="tp-pc-${s.id}" placeholder="Task description…" rows="2"></textarea>
-    <select class="tp-pt-edit-sel" id="tp-pst-${s.id}">
-      <option value="not_started">⬜ Not Started</option>
-      <option value="in_process">🔄 In Process</option>
-      <option value="completed">✅ Completed</option>
-    </select>
-    <input class="tp-pt-inp" id="tp-pn-${s.id}" placeholder="📝 Notes (optional)"/>
-    <input class="tp-pt-inp" id="tp-pb-${s.id}" placeholder="🔴 Blocker (optional)"/>
-    <input class="tp-pt-inp" id="tp-ps-${s.id}" placeholder="💡 Solution (optional)"/>
-    <div style="display:flex;gap:5px;margin-top:4px">
-      <button onclick="tpSavePoint(${s.id})" style="background:var(--accent);border:none;color:#fff;padding:5px 12px;border-radius:7px;font-size:.72rem;cursor:pointer;font-family:inherit;font-weight:600">✓ Save</button>
-      <button onclick="tpToggleForm(${s.id})" style="background:transparent;border:1px solid var(--border);color:var(--txt2);padding:5px 12px;border-radius:7px;font-size:.72rem;cursor:pointer;font-family:inherit">Cancel</button>
-    </div>
+  const pct=s.task_total?Math.round(s.task_done/s.task_total*100):0;
+  const progressHtml=(!isCollapsed&&s.task_total)?`<div class="step-progress-mini">
+    <div class="step-progress-track"><div class="step-progress-fill" style="width:${pct}%"></div></div>
+    <span class="step-progress-lbl">${s.task_done}/${s.task_total} done</span>
   </div>`:'';
-  const addBtn=(!isCollapsed)?`<button class="tp-add-pt-btn" onclick="tpToggleForm(${s.id})">＋ Add task</button>`:'';
-  const ptCount=pts.length?`<span class="tp-pt-count">${pts.length} task${pts.length!==1?'s':''}</span>`:'';
+  const addRow=(!isCollapsed)?`<div class="step-task-add-row">
+    <input type="text" class="tp-pt-inp" id="tp-add-task-${s.id}" placeholder="+ Add task… (Enter)" onkeydown="if(event.key==='Enter')tpAddTaskToStep(${s.id})"/>
+    <button class="sub-add-btn" onclick="tpAddTaskToStep(${s.id})">Add</button>
+  </div>`:'';
+  const ptCount=tasks.length?`<span class="tp-pt-count">${tasks.length} task${tasks.length!==1?'s':''}</span>`:'';
   return `<div class="tp-step-card ${isCollapsed?'collapsed':''}" id="tps-${s.id}">
     <div class="tp-step-hdr" onclick="tpToggleCollapse(${s.id})" style="cursor:pointer">
       <span class="tp-step-chev">${isCollapsed?'▶':'▼'}</span>
@@ -3559,31 +3613,19 @@ function _tpStepCardHtml(s){
       </select>
       <button class="tp-del-btn" onclick="event.stopPropagation();tpDeleteStep(${s.id})">✕</button>
     </div>
-    ${ptsHtml}
-    ${form}
-    ${addBtn}
+    ${progressHtml}
+    <div class="step-task-list">${tasksHtml}</div>
+    ${addRow}
   </div>`;
 }
 
-function _tpPointCardHtml(p,sid){
-  return `<div class="tp-pt-card" id="tpp-${p.id}">
-    <span class="tp-pt-txt ${(p.status==='completed'||p.status==='cancelled')?' done':''}">${esc(p.content)}</span>
-    ${p.notes?`<div class="tp-pt-note">${esc(p.notes)}</div>`:''}
-    ${p.blocker?`<div class="tp-pt-blocker">🔴 ${esc(p.blocker)}</div>`:''}
-    <div class="tp-pt-acts">
-      <span class="tp-pt-status-lbl">${SL[p.status]||p.status||'Not Started'}</span>
-      <button class="tp-pt-act-btn" onclick="tpStartEdit(${p.id},${sid})" title="Edit">✏</button>
-      <button class="tp-pt-act-btn del" onclick="tpDeletePoint(${p.id},${sid})" title="Delete">✕</button>
-    </div>
-  </div>`;
-}
-
-function tpToggleForm(sid){
-  if(tpOpenForms.has(sid)) tpOpenForms.delete(sid);
-  else tpOpenForms.add(sid);
-  const step=taskPageSteps.find(s=>s.id===sid);
-  if(step){const card=document.getElementById(`tps-${sid}`);if(card)card.outerHTML=_tpStepCardHtml(step);}
-  if(tpOpenForms.has(sid)) setTimeout(()=>document.getElementById(`tp-pc-${sid}`)?.focus(),40);
+async function tpAddTaskToStep(sid){
+  const inp=document.getElementById(`tp-add-task-${sid}`);
+  if(!inp)return;
+  const title=inp.value.trim();if(!title)return;
+  inp.value='';
+  await fetch('/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,step_id:sid})});
+  await _tpReload();
 }
 
 function tpToggleCollapse(sid){
@@ -3608,82 +3650,13 @@ async function tpUpdateStepStatus(sid,status){
 }
 
 async function tpDeleteStep(sid){
-  if(!confirm('Delete this step and all its tasks?'))return;
-  tpOpenForms.delete(sid);
+  if(!confirm('Delete this step? Its tasks will be kept but unassigned from this step.'))return;
   await fetch(`/steps/${sid}`,{method:'DELETE'});
   await _tpReload();
 }
 
-async function tpSavePoint(sid){
-  const content=(document.getElementById(`tp-pc-${sid}`)?.value||'').trim();
-  if(!content){showToast('Task description is required','warn');return;}
-  const status=document.getElementById(`tp-pst-${sid}`)?.value||'not_started';
-  const notes=(document.getElementById(`tp-pn-${sid}`)?.value||'').trim()||'';
-  const blocker=(document.getElementById(`tp-pb-${sid}`)?.value||'').trim()||null;
-  const solution=(document.getElementById(`tp-ps-${sid}`)?.value||'').trim()||null;
-  await fetch(`/steps/${sid}/points`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,status,notes,blocker,solution})});
-  tpOpenForms.delete(sid);
-  await _tpReload();
-}
-
-function tpStartEdit(pid,sid){
-  const step=taskPageSteps.find(s=>s.id===sid);
-  if(!step)return;
-  const pt=step.points?.find(p=>p.id===pid);
-  if(!pt)return;
-  const card=document.getElementById(`tpp-${pid}`);
-  if(!card)return;
-  card.outerHTML=`<div class="tp-pt-card" id="tpp-${pid}">
-    <textarea class="tp-pt-edit-inp" id="tpe-ct-${pid}" rows="2">${esc(pt.content)}</textarea>
-    <select class="tp-pt-edit-sel" id="tpe-st-${pid}">
-      <option value="not_started" ${(pt.status||'not_started')==='not_started'?'selected':''}>Not Started</option>
-      <option value="in_process" ${pt.status==='in_process'?'selected':''}>In Process</option>
-      <option value="completed" ${pt.status==='completed'?'selected':''}>Completed</option>
-      <option value="cancelled" ${pt.status==='cancelled'?'selected':''}>Cancelled</option>
-    </select>
-    <input class="tp-pt-edit-inp" id="tpe-nt-${pid}" placeholder="Notes…" value="${esc(pt.notes||'')}"/>
-    <input class="tp-pt-edit-inp" id="tpe-bl-${pid}" placeholder="Blocker…" value="${esc(pt.blocker||'')}"/>
-    <input class="tp-pt-edit-inp" id="tpe-sl-${pid}" placeholder="Solution…" value="${esc(pt.solution||'')}"/>
-    <div style="display:flex;gap:5px;margin-top:5px">
-      <button onclick="tpSaveEdit(${pid},${sid})" style="background:var(--accent);border:none;color:#fff;padding:4px 10px;border-radius:6px;font-size:.72rem;cursor:pointer;font-family:inherit">Save</button>
-      <button onclick="tpCancelEdit(${pid},${sid})" style="background:transparent;border:1px solid var(--border);color:var(--txt2);padding:4px 10px;border-radius:6px;font-size:.72rem;cursor:pointer;font-family:inherit">Cancel</button>
-    </div>
-  </div>`;
-}
-
-async function tpSaveEdit(pid,sid){
-  const content=(document.getElementById(`tpe-ct-${pid}`)?.value||'').trim();
-  if(!content){showToast('Task description is required','warn');return;}
-  const status=document.getElementById(`tpe-st-${pid}`)?.value||'not_started';
-  const notes=(document.getElementById(`tpe-nt-${pid}`)?.value||'').trim()||'';
-  const blocker=(document.getElementById(`tpe-bl-${pid}`)?.value||'').trim()||null;
-  const solution=(document.getElementById(`tpe-sl-${pid}`)?.value||'').trim()||null;
-  await fetch(`/points/${pid}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content,status,notes,blocker,solution})});
-  await _tpReload();
-}
-
-function tpCancelEdit(pid,sid){
-  const step=taskPageSteps.find(s=>s.id===sid);
-  const pt=step?.points?.find(p=>p.id===pid);
-  if(!pt)return;
-  const card=document.getElementById(`tpp-${pid}`);
-  if(card) card.outerHTML=_tpPointCardHtml(pt,sid);
-}
-
-async function tpDeletePoint(pid,sid){
-  await fetch(`/points/${pid}`,{method:'DELETE'});
-  await _tpReload();
-}
-
 async function _tpReload(){
-  const r=await fetch(`/tasks/${taskPageId}/steps`);
-  taskPageSteps=await r.json();
-  const task=allTasks.find(t=>t.id===taskPageId);
-  _renderTpTopbar(task,taskPageSteps);
-  _renderTpProgress(taskPageSteps);
-  _renderTpTrack(taskPageSteps);
-  if(tpCurrentView==='flow') renderFlowView(taskPageSteps);
-  loadAll();
+  await loadAll();
 }
 
 // ── Workflows view ─────────────────────────────────────────────────────────────
@@ -3748,6 +3721,7 @@ let tpCurrentView='flow';
 
 function tpSwitchView(v){
   tpCurrentView=v;
+  localStorage.setItem('task_page_view',v);
   document.querySelectorAll('.tp-vtab').forEach(b=>b.classList.toggle('active',b.dataset.tv===v));
   const track=document.getElementById('tp-track');
   const flow=document.getElementById('tp-flow');
@@ -3779,14 +3753,19 @@ const FN_LABEL={not_started:'Not Started',in_progress:'In Progress',completed:'C
 
 function _flowNodeHtml(step,num,isParallel){
   const st=step.status||'not_started';
-  const pts=step.points||[];
-  const show=pts.slice(0,3);
-  const more=pts.length-3;
-  const ptsHtml=show.map(p=>`<div class="flow-pt-row">
-    <div class="flow-pt-dot ps-${p.status||'not_started'}"></div>
-    <span class="flow-pt-txt${(p.status==='completed'||p.status==='cancelled')?' done':''}">${esc(p.content)}</span>
+  const tasks=step.tasks||[];
+  const show=tasks.slice(0,3);
+  const more=tasks.length-3;
+  const pct=step.task_total?Math.round(step.task_done/step.task_total*100):0;
+  const tasksHtml=show.map(t=>`<div class="flow-pt-row" onclick="event.stopPropagation();openPanel(${t.id})" style="cursor:pointer">
+    <div class="flow-pt-dot ps-${t.status||'not_started'}"></div>
+    <span class="flow-pt-txt${['completed','cancelled'].includes(t.status)?' done':''}">${esc(t.title)}</span>
   </div>`).join('');
   const moreHtml=more>0?`<div class="flow-pt-more">+${more} more task${more>1?'s':''}</div>`:'';
+  const progHtml=step.task_total?`<div class="step-progress-mini" style="padding:0 14px;margin-top:6px">
+    <div class="step-progress-track"><div class="step-progress-fill" style="width:${pct}%"></div></div>
+    <span class="step-progress-lbl">${step.task_done}/${step.task_total}</span>
+  </div>`:'';
   return `<div class="flow-node fn-${st}${isParallel?' flow-node-parallel':''}" id="fn-${step.id}">
     <div class="flow-node-hdr">
       <div class="flow-node-icon-row">
@@ -3796,17 +3775,26 @@ function _flowNodeHtml(step,num,isParallel){
       <div class="flow-node-title">${esc(step.title)}</div>
       <div class="flow-node-badge fns-${st}">${FN_LABEL[st]||st}</div>
     </div>
-    ${show.length?`<div class="flow-node-pts">${ptsHtml}${moreHtml}</div>`:''}
+    ${progHtml}
+    ${show.length?`<div class="flow-node-pts">${tasksHtml}${moreHtml}</div>`:''}
     <div class="flow-node-footer">
       <select class="flow-node-sel" onchange="tpFlowSetStatus(${step.id},this.value)" onclick="event.stopPropagation()">
         <option value="not_started" ${st==='not_started'?'selected':''}>○ Not Started</option>
         <option value="in_progress" ${st==='in_progress'?'selected':''}>◑ In Progress</option>
         <option value="completed"   ${st==='completed'  ?'selected':''}>● Done</option>
       </select>
+      <button class="flow-na-btn" onclick="event.stopPropagation();tpFlowAddTask(${step.id})" title="Add a task to this step">＋ Task</button>
       <button class="flow-na-btn" onclick="tpFlowAddParallel(${step.id})" title="Add a step that runs in parallel with this one">⇉ Parallel</button>
       <button class="flow-na-btn danger" onclick="tpFlowDelStep(${step.id})" title="Delete step">✕</button>
     </div>
   </div>`;
+}
+
+async function tpFlowAddTask(sid){
+  const title=prompt('Task title:');
+  if(!title?.trim())return;
+  await fetch('/tasks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.trim(),step_id:sid})});
+  await _tpReload();
 }
 
 function _flowConnHtml(done,active){
@@ -3929,7 +3917,8 @@ const NOTE_COLORS={
 };
 
 // ── Notes state ───────────────────────────────────────────────────────────────
-let allBooks=_loadBooks();
+let allBooks=[];
+let notesLoaded=false;
 let activeBookId=null, activeChapterId=null, activePageId=null;
 let nbOpenBooks=new Set(JSON.parse(localStorage.getItem('nb_open_books')||'[]'));
 let nbOpenChapters=new Set(JSON.parse(localStorage.getItem('nb_open_chapters')||'[]'));
@@ -3962,21 +3951,44 @@ function updateTbState(){
 
 // ── Notes (3-level: Books › Chapters › Pages) ─────────────────────────────────
 
-function _loadBooks(){
-  const stored=localStorage.getItem('taskflow_books');
-  if(stored) return JSON.parse(stored);
-  // Migrate old flat notes into a default book
-  const old=JSON.parse(localStorage.getItem('taskflow_notes')||'[]');
-  if(old.length){
-    const now=new Date().toISOString();
-    return [{id:Date.now(),title:'My Notes',color:'default',created_at:now,updated_at:now,
-      chapters:[{id:Date.now()+1,title:'General',created_at:now,updated_at:now,pages:old}]}];
-  }
-  return [];
+async function loadNotesFromBackend(){
+  const r=await fetch('/notes/books');
+  allBooks=await r.json();
+  if(!allBooks.length) await migrateLocalNotesIfAny();
+  notesLoaded=true;
 }
 
-function saveBooks(){
-  localStorage.setItem('taskflow_books',JSON.stringify(allBooks));
+async function migrateLocalNotesIfAny(){
+  const stored=localStorage.getItem('taskflow_books');
+  let localBooks=stored?JSON.parse(stored):[];
+  if(!localBooks.length){
+    const old=JSON.parse(localStorage.getItem('taskflow_notes')||'[]');
+    if(old.length) localBooks=[{title:'My Notes',color:'default',chapters:[{title:'General',pages:old}]}];
+  }
+  if(!localBooks.length)return;
+  showToast('📦 Migrating notes to backend…');
+  for(const b of localBooks){
+    const newBook=await(await fetch('/notes/books',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title:b.title||'Untitled',color:b.color||'default'})})).json();
+    for(const c of (b.chapters||[])){
+      const newChapter=await(await fetch(`/notes/books/${newBook.id}/chapters`,{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({title:c.title||'Untitled'})})).json();
+      // create_page prepends (like the old unshift behavior) — insert in reverse so final order matches the original
+      for(const p of [...(c.pages||[])].reverse()){
+        const newPage=await(await fetch(`/notes/chapters/${newChapter.id}/pages`,{method:'POST',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({title:p.title||'Untitled'})})).json();
+        await fetch(`/notes/pages/${newPage.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({body:p.body||'',color:p.color||'default',pinned:!!p.pinned})});
+      }
+    }
+  }
+  localStorage.setItem('taskflow_books_migrated_backup',stored||'[]');
+  localStorage.removeItem('taskflow_books');
+  allBooks=await(await fetch('/notes/books')).json();
+  showToast('✅ Notes migrated to backend');
+}
+
+function saveNbUiState(){
   localStorage.setItem('nb_open_books',JSON.stringify([...nbOpenBooks]));
   localStorage.setItem('nb_open_chapters',JSON.stringify([...nbOpenChapters]));
 }
@@ -4120,12 +4132,12 @@ function renderSearchResults(el){
 function nbToggleBook(bid){
   if(nbOpenBooks.has(bid)) nbOpenBooks.delete(bid);
   else nbOpenBooks.add(bid);
-  renderBookTree(); saveBooks();
+  renderBookTree(); saveNbUiState();
 }
 function nbToggleChapter(bid,cid){
   if(nbOpenChapters.has(cid)) nbOpenChapters.delete(cid);
   else {nbOpenBooks.add(bid);nbOpenChapters.add(cid);}
-  renderBookTree(); saveBooks();
+  renderBookTree(); saveNbUiState();
 }
 function nbOpenPage(bid,cid,pid){
   noteReadMode=false;
@@ -4150,39 +4162,36 @@ function nbStartAddPage(bid,cid){
 }
 function nbCancelAdd(){nbAddingChapter=null;nbAddingPage=null;renderBookTree();}
 
-function nbSaveChapter(bid){
+async function nbSaveChapter(bid){
   const inp=document.getElementById(`nb-ch-inp-${bid}`);
   const title=(inp?.value||'').trim();if(!title)return;
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
-  const now=new Date().toISOString();
-  const c={id:Date.now(),title,created_at:now,updated_at:now,pages:[]};
-  b.chapters.push(c); b.updated_at=now;
+  const c=await(await fetch(`/notes/books/${bid}/chapters`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title})})).json();
+  b.chapters.push(c);
   nbOpenChapters.add(c.id); nbAddingChapter=null;
-  saveBooks(); renderBookTree();
+  saveNbUiState(); renderBookTree();
   showToast('📖 Chapter created');
 }
-function nbSavePage(bid,cid){
+async function nbSavePage(bid,cid){
   const inp=document.getElementById(`nb-pg-inp-${cid}`);
   const title=(inp?.value||'').trim();if(!title)return;
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const c=b.chapters.find(c=>c.id===cid);if(!c)return;
-  const now=new Date().toISOString();
-  const p={id:Date.now(),title,body:'',color:'default',pinned:false,created_at:now,updated_at:now};
-  c.pages.unshift(p); c.updated_at=b.updated_at=now;
-  nbAddingPage=null; saveBooks();
+  const p=await(await fetch(`/notes/chapters/${cid}/pages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title})})).json();
+  c.pages.unshift(p);
+  nbAddingPage=null;
   nbOpenPage(bid,cid,p.id);
   showToast('📄 Page created');
   setTimeout(()=>document.getElementById('ne-body')?.focus(),60);
 }
 
 // ── Create / Rename / Delete ──────────────────────────────────────────────────
-function nbNewBook(){
+async function nbNewBook(){
   const title=prompt('Notebook name (e.g. "Deep Learning"):');
   if(!title?.trim())return;
-  const now=new Date().toISOString();
-  const b={id:Date.now(),title:title.trim(),color:'default',created_at:now,updated_at:now,chapters:[]};
+  const b=await(await fetch('/notes/books',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:title.trim()})})).json();
   allBooks.push(b); nbOpenBooks.add(b.id);
-  saveBooks(); renderBookTree();
+  saveNbUiState(); renderBookTree();
   showToast('📚 Notebook created');
 }
 // Keyboard shortcut compat — create page in active chapter or prompt
@@ -4193,48 +4202,51 @@ function newNote(){
   showToast('Create a chapter first','info');
 }
 
-function nbRenameBook(bid){
+async function nbRenameBook(bid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const t=prompt('Rename notebook:',b.title);
   if(!t?.trim()||t.trim()===b.title)return;
-  b.title=t.trim();b.updated_at=new Date().toISOString();
-  saveBooks();renderBookTree();
+  await fetch(`/notes/books/${bid}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t.trim()})});
+  b.title=t.trim();
+  renderBookTree();
 }
-function nbDeleteBook(bid){
+async function nbDeleteBook(bid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const total=b.chapters.reduce((s,c)=>s+c.pages.length,0);
   if(!confirm(`Delete notebook "${b.title}"?\n${b.chapters.length} chapters · ${total} pages will be removed.`))return;
+  await fetch(`/notes/books/${bid}`,{method:'DELETE'});
   allBooks=allBooks.filter(x=>x.id!==bid);
   if(activeBookId===bid){activeBookId=null;activeChapterId=null;activePageId=null;}
-  saveBooks();renderBookTree();
+  renderBookTree();
   renderNoteEditor(null,null);
 }
-function nbRenameChapter(bid,cid){
+async function nbRenameChapter(bid,cid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const c=b.chapters.find(c=>c.id===cid);if(!c)return;
   const t=prompt('Rename chapter:',c.title);
   if(!t?.trim()||t.trim()===c.title)return;
-  c.title=t.trim();c.updated_at=b.updated_at=new Date().toISOString();
-  saveBooks();renderBookTree();
+  await fetch(`/notes/chapters/${cid}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:t.trim()})});
+  c.title=t.trim();
+  renderBookTree();
 }
-function nbDeleteChapter(bid,cid){
+async function nbDeleteChapter(bid,cid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const c=b.chapters.find(c=>c.id===cid);if(!c)return;
   if(!confirm(`Delete chapter "${c.title}" and all ${c.pages.length} pages?`))return;
+  await fetch(`/notes/chapters/${cid}`,{method:'DELETE'});
   b.chapters=b.chapters.filter(c=>c.id!==cid);
   if(activeChapterId===cid){activeChapterId=null;activePageId=null;}
-  b.updated_at=new Date().toISOString();
-  saveBooks();renderBookTree();
+  renderBookTree();
   if(!activePageId)renderNoteEditor(null,null);
 }
-function nbDeletePage(bid,cid,pid){
+async function nbDeletePage(bid,cid,pid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const c=b.chapters.find(c=>c.id===cid);if(!c)return;
   if(!confirm('Delete this page?'))return;
+  await fetch(`/notes/pages/${pid}`,{method:'DELETE'});
   c.pages=c.pages.filter(p=>p.id!==pid);
-  const now=new Date().toISOString();c.updated_at=b.updated_at=now;
   if(activePageId===pid) activePageId=c.pages.length?c.pages[0].id:null;
-  saveBooks();renderBookTree();
+  renderBookTree();
   const found=activePageId?findPage(activePageId):null;
   renderNoteEditor(found?found.page:null,found);
 }
@@ -4331,33 +4343,35 @@ function setNoteSaveState(s){
   else{dot.className='ns-save-dot';lbl.textContent='Saved';}
 }
 function scheduleNoteSave(){clearTimeout(noteSaveTimer);noteSaveTimer=setTimeout(commitNoteSave,700);}
-function commitNoteSave(){
+async function commitNoteSave(){
   const found=findPage(activePageId);if(!found)return;
-  const {page,chapter,book}=found;
+  const {page}=found;
   const tEl=document.getElementById('ne-title'),bEl=document.getElementById('ne-body');
   if(!tEl||!bEl)return;
   page.title=tEl.value; page.body=bEl.innerHTML;
-  page.updated_at=chapter.updated_at=book.updated_at=new Date().toISOString();
-  saveBooks(); setNoteSaveState('saved');
+  await fetch(`/notes/pages/${page.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({title:page.title,body:page.body})});
+  setNoteSaveState('saved');
 }
 
 // ── Page actions ──────────────────────────────────────────────────────────────
-function setPageColor(color){
+async function setPageColor(color){
   const found=findPage(activePageId);if(!found)return;
-  found.page.color=color; found.page.updated_at=new Date().toISOString();
-  saveBooks();
+  found.page.color=color;
+  await fetch(`/notes/pages/${found.page.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({color})});
   document.querySelectorAll('.ne-cdot').forEach(d=>d.classList.remove('nc-sel'));
   const dc=NOTE_COLORS[color]||'#888';
   document.querySelector(`.ne-cdot[style*="${dc}"]`)?.classList.add('nc-sel');
 }
-function duplicatePage(pid){
+async function duplicatePage(pid){
   const found=findPage(pid);if(!found)return;
   const {book:b,chapter:c,page:src}=found;
-  const now=new Date().toISOString();
-  const copy={...src,id:Date.now(),title:(src.title||'Page')+' (copy)',pinned:false,created_at:now,updated_at:now};
-  c.pages.splice(c.pages.findIndex(p=>p.id===pid)+1,0,copy);
-  c.updated_at=b.updated_at=now;
-  saveBooks(); nbOpenPage(b.id,c.id,copy.id);
+  const newTitle=(src.title||'Page')+' (copy)';
+  const copy=await(await fetch(`/notes/chapters/${c.id}/pages`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title:newTitle})})).json();
+  const saved=await(await fetch(`/notes/pages/${copy.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({body:src.body||'',color:src.color||'default'})})).json();
+  c.pages.unshift(saved);
+  nbOpenPage(b.id,c.id,saved.id);
 }
 function exportPage(pid){
   const found=findPage(pid);if(!found)return;
@@ -4398,6 +4412,401 @@ function toggleNoteFocus(){
 }
 function nbSearch(q){noteSearchQ=q;renderBookTree();}
 
+// ── Flashcards state ────────────────────────────────────────────────────────────
+let fcSubView='review';        // 'review' | 'browse'
+let fcActiveCategoryId=null;   // null='All', 'fav'=Favorites, or a category id
+let fcSearchQ='';
+let fcStudyQueue=[], fcStudyIndex=0, fcRevealed=false, fcStudyMode='browse';
+
+async function loadFlashcards(){
+  const [catR,cardR]=await Promise.all([fetch('/flashcards/categories'),fetch('/flashcards')]);
+  allFcCategories=await catR.json();
+  allFlashcards=await cardR.json();
+}
+
+// ── Flashcards: top-level render ──────────────────────────────────────────────
+function renderFlashcards(){
+  const el=document.getElementById('view-flashcards');
+  if(!el)return;
+  el.innerHTML=`<div class="tp-view-toggle" style="margin:14px 18px">
+      <button class="tp-vtab ${fcSubView==='review'?'active':''}" onclick="fcSwitchSubView('review')">🧠 Review</button>
+      <button class="tp-vtab ${fcSubView==='browse'?'active':''}" onclick="fcSwitchSubView('browse')">📚 Browse</button>
+    </div>
+    <div id="fc-subview-body"></div>`;
+  if(fcSubView==='review') renderFcReview();
+  else renderFcBrowse();
+}
+function fcSwitchSubView(v){ fcSubView=v; renderFlashcards(); }
+
+// ── Flashcards: Daily Review landing ──────────────────────────────────────────
+function renderFcReview(){
+  const el=document.getElementById('fc-subview-body');
+  if(!el)return;
+  const due=allFlashcards.filter(c=>c.is_due);
+  if(!due.length){
+    el.innerHTML=`<div class="fc-review-hero">
+      <div class="fc-review-icon">🎉</div>
+      <div class="fc-review-title">All caught up!</div>
+      <div class="fc-review-sub">No cards due for review right now. Check back later, or browse your full collection.</div>
+      <button class="fc-start-btn" onclick="fcSwitchSubView('browse')">📚 Browse Flashcards</button>
+    </div>`;
+    return;
+  }
+  const groups=new Map();
+  for(const c of due){
+    const key=c.category?c.category.id:'none';
+    if(!groups.has(key)) groups.set(key,{category:c.category,cards:[]});
+    groups.get(key).cards.push(c);
+  }
+  const rows=[...groups.values()].map(g=>`
+    <div class="fc-review-cat-row">
+      <span class="fc-cat-dot" style="background:${g.category?g.category.color:'var(--txt3)'}"></span>
+      <span>${g.category?esc(g.category.name):'Uncategorized'}</span>
+      <span class="fc-review-cat-count">${g.cards.length}</span>
+    </div>`).join('');
+  el.innerHTML=`<div class="fc-review-hero">
+    <div class="fc-review-icon">🧠</div>
+    <div class="fc-review-title">Today's Revision</div>
+    <div class="fc-review-sub">${due.length} card${due.length!==1?'s':''} ready for review</div>
+    <div class="fc-review-cats">${rows}</div>
+    <button class="fc-start-btn" onclick="fcStartDailyReview()">▶ Start Review</button>
+  </div>`;
+}
+function fcStartDailyReview(){
+  const due=allFlashcards.filter(c=>c.is_due);
+  fcStartStudy(due,'review');
+}
+
+// ── Flashcards: Browse ────────────────────────────────────────────────────────
+function fcFilteredCards(){
+  let filtered=allFlashcards;
+  if(fcActiveCategoryId==='fav') filtered=filtered.filter(c=>c.is_favorite);
+  else if(fcActiveCategoryId) filtered=filtered.filter(c=>c.category_id===fcActiveCategoryId);
+  if(fcSearchQ){
+    const q=fcSearchQ.toLowerCase();
+    filtered=filtered.filter(c=>c.question.toLowerCase().includes(q)||c.answer.toLowerCase().includes(q));
+  }
+  return filtered;
+}
+
+function renderFcBrowse(){
+  const el=document.getElementById('fc-subview-body');
+  if(!el)return;
+  const allActive=fcActiveCategoryId===null, favActive=fcActiveCategoryId==='fav';
+  const catRows=allFcCategories.map(c=>{
+    const active=fcActiveCategoryId===c.id;
+    return `<div class="fc-cat-item ${active?'active':''}" onclick="fcSetCategory(${c.id})">
+      <span class="fc-cat-dot" style="background:${c.color}"></span>
+      <span class="fc-cat-name" title="${esc(c.name)}">${esc(c.name)}</span>
+      <span class="fc-cat-count">${c.card_total}</span>
+      <button class="fc-cat-del" onclick="event.stopPropagation();fcDeleteCategory(${c.id})" title="Delete category">✕</button>
+    </div>`;
+  }).join('');
+  const sidebar=`
+    <div class="fc-cat-item ${allActive?'active':''}" onclick="fcSetCategory(null)">
+      <span class="fc-cat-dot" style="background:var(--txt3)"></span>
+      <span class="fc-cat-name">All Cards</span>
+      <span class="fc-cat-count">${allFlashcards.length}</span>
+    </div>
+    <div class="fc-cat-item ${favActive?'active':''}" onclick="fcSetCategory('fav')">
+      <span class="fc-cat-dot" style="background:#f59e0b"></span>
+      <span class="fc-cat-name">⭐ Favorites</span>
+      <span class="fc-cat-count">${allFlashcards.filter(c=>c.is_favorite).length}</span>
+    </div>
+    ${catRows}
+    <div class="fc-cat-add-row">
+      <input type="text" class="fc-search" id="fc-new-cat-inp" placeholder="+ New category…" style="font-size:.76rem;padding:6px 8px" onkeydown="if(event.key==='Enter')fcCreateCategory()"/>
+    </div>`;
+
+  const filtered=fcFilteredCards();
+  const rows=filtered.length?filtered.map(c=>`
+    <div class="fc-row" onclick="fcOpenBrowseStudy(${c.id})">
+      ${c.category?`<span class="fc-row-cat" style="background:${c.category.color}">${esc(c.category.name)}</span>`:''}
+      <span class="fc-row-q">${esc(c.question)}</span>
+      ${c.is_due?'<span class="fc-row-due">● due</span>':''}
+      <button class="fc-row-star ${c.is_favorite?'on':''}" onclick="event.stopPropagation();fcToggleFavoriteRow(${c.id})">${c.is_favorite?'★':'☆'}</button>
+      <div class="fc-row-acts">
+        <button class="fc-row-act-btn" onclick="event.stopPropagation();fcOpenEditModal(${c.id})" title="Edit">✏</button>
+        <button class="fc-row-act-btn" onclick="event.stopPropagation();fcDeleteRow(${c.id})" title="Delete">🗑</button>
+      </div>
+    </div>`).join('')
+    : `<div class="fc-empty">No flashcards ${fcSearchQ?`match "${esc(fcSearchQ)}"`:'yet'}.<br><button class="fc-start-btn" style="margin-top:10px" onclick="fcOpenEditModal(null)">＋ New Flashcard</button></div>`;
+
+  el.innerHTML=`<div class="fc-layout">
+    <div class="fc-sidebar">${sidebar}</div>
+    <div class="fc-main">
+      <div class="fc-toolbar">
+        <input type="text" class="fc-search" placeholder="Search flashcards…" value="${esc(fcSearchQ)}" oninput="fcSearch(this.value)"/>
+        <button class="hdr-btn primary" onclick="fcOpenEditModal(null)">＋ New Card</button>
+      </div>
+      <div class="fc-list">${rows}</div>
+    </div>
+  </div>`;
+}
+function fcSetCategory(id){ fcActiveCategoryId=id; renderFcBrowse(); }
+function fcSearch(q){ fcSearchQ=q; renderFcBrowse(); }
+
+function fcOpenBrowseStudy(cardId){
+  const filtered=fcFilteredCards();
+  const idx=filtered.findIndex(c=>c.id===cardId);
+  fcStartStudy(filtered,'browse',idx>=0?idx:0);
+}
+
+async function fcToggleFavoriteRow(id){
+  const card=allFlashcards.find(c=>c.id===id); if(!card)return;
+  await fetch(`/flashcards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_favorite:!card.is_favorite})});
+  await loadFlashcards();
+  renderFcBrowse();
+}
+async function fcDeleteRow(id){
+  if(!confirm('Delete this flashcard?'))return;
+  await fetch(`/flashcards/${id}`,{method:'DELETE'});
+  await loadFlashcards();
+  renderFcBrowse();
+}
+
+async function fcCreateCategory(){
+  const inp=document.getElementById('fc-new-cat-inp');
+  const name=(inp?.value||'').trim(); if(!name)return;
+  const palette=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
+  const color=palette[allFcCategories.length%palette.length];
+  await fetch('/flashcards/categories',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,color})});
+  await loadFlashcards();
+  renderFcBrowse();
+  showToast('📚 Category created');
+}
+async function fcDeleteCategory(id){
+  const cat=allFcCategories.find(c=>c.id===id); if(!cat)return;
+  if(!confirm(`Delete category "${cat.name}"? Cards stay, just become uncategorized.`))return;
+  await fetch(`/flashcards/categories/${id}`,{method:'DELETE'});
+  if(fcActiveCategoryId===id) fcActiveCategoryId=null;
+  await loadFlashcards();
+  renderFcBrowse();
+}
+
+// ── Flashcards: create/edit modal ─────────────────────────────────────────────
+function fcOpenEditModal(id){
+  const card=id?allFlashcards.find(c=>c.id===id):null;
+  document.getElementById('fc-edit-id').value=id||'';
+  document.getElementById('fc-modal-title-txt').textContent=id?'Edit Flashcard':'New Flashcard';
+  document.getElementById('fc-edit-q').value=card?.question||'';
+  document.getElementById('fc-edit-a').value=card?.answer||'';
+  const sel=document.getElementById('fc-edit-cat');
+  sel.innerHTML='<option value="">— Uncategorized —</option>'+allFcCategories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
+  sel.value=card?.category_id||'';
+  document.getElementById('fc-edit-del-btn').style.display=id?'':'none';
+  document.getElementById('fc-edit-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('fc-edit-q').focus(),60);
+}
+function fcCloseEditModal(){document.getElementById('fc-edit-overlay').classList.remove('open');}
+async function fcSaveFromModal(){
+  const question=document.getElementById('fc-edit-q').value.trim();
+  const answer=document.getElementById('fc-edit-a').value.trim();
+  if(!question||!answer){showToast('Question and answer are required');return;}
+  const id=document.getElementById('fc-edit-id').value;
+  const body={question,answer,category_id:document.getElementById('fc-edit-cat').value||null};
+  const res=await fetch(id?`/flashcards/${id}`:'/flashcards',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const saved=await res.json();
+  await loadFlashcards();
+  fcCloseEditModal();
+  showToast('🧠 Flashcard saved');
+  if(document.getElementById('fc-study').classList.contains('open')){
+    const idx=fcStudyQueue.findIndex(c=>c.id===saved.id);
+    if(idx>=0){ fcStudyQueue[idx]=saved; if(idx===fcStudyIndex) fcRenderStudyCard(); }
+  }else{
+    renderFlashcards();
+  }
+}
+async function fcDeleteFromModal(){
+  const id=document.getElementById('fc-edit-id').value;
+  if(!id)return;
+  if(!confirm('Delete this flashcard?'))return;
+  await fetch(`/flashcards/${id}`,{method:'DELETE'});
+  await loadFlashcards();
+  fcCloseEditModal();
+  if(document.getElementById('fc-study').classList.contains('open')){
+    fcStudyQueue=fcStudyQueue.filter(c=>String(c.id)!==String(id));
+    if(fcStudyIndex>=fcStudyQueue.length) fcStudyIndex=Math.max(0,fcStudyQueue.length-1);
+    fcRevealed=false; fcRenderStudyCard();
+  }else{
+    renderFlashcards();
+  }
+}
+
+// ── Flashcards: study viewer ──────────────────────────────────────────────────
+function fcStartStudy(queue,mode,startIndex){
+  if(!queue.length){showToast('No cards to study');return;}
+  fcStudyQueue=queue; fcStudyIndex=startIndex||0; fcStudyMode=mode; fcRevealed=false;
+  document.getElementById('fc-study').classList.add('open');
+  fcRenderStudyCard();
+}
+function fcCloseStudy(){
+  const wasOpen=document.getElementById('fc-study').classList.contains('open');
+  document.getElementById('fc-study').classList.remove('open');
+  fcStudyQueue=[]; fcStudyIndex=0;
+  if(wasOpen&&currentView==='flashcards') renderFlashcards();
+}
+function fcCurrentCard(){ return fcStudyQueue[fcStudyIndex]; }
+
+function fcRenderStudyCard(){
+  const card=fcCurrentCard();
+  if(!card){ fcRenderStudyComplete(); return; }
+  document.getElementById('fc-study-progress').textContent=`${fcStudyIndex+1} of ${fcStudyQueue.length}`;
+  const favBtn=document.getElementById('fc-fav-btn');
+  favBtn.textContent=card.is_favorite?'★':'☆';
+  favBtn.classList.toggle('active',!!card.is_favorite);
+  const catBadge=card.category?`<span class="fc-study-cat" style="background:${card.category.color}">${esc(card.category.name)}</span>`:'';
+  const noteLink=card.source_note?`<div class="fc-study-note-link" onclick="fcOpenSourceNote(${card.source_note.id})">📄 View source note: ${esc(card.source_note.title)}</div>`:'';
+  const body=document.getElementById('fc-study-body');
+  if(!fcRevealed){
+    body.innerHTML=`
+      ${catBadge}
+      <div class="fc-study-card"><div class="fc-study-q">${esc(card.question)}</div></div>
+      <button class="fc-reveal-btn" onclick="fcReveal()">Reveal Answer</button>
+      <div class="fc-study-hint">Press Space to reveal</div>`;
+  }else{
+    body.innerHTML=`
+      ${catBadge}
+      <div class="fc-study-card">
+        <div class="fc-study-q">${esc(card.question)}</div>
+        <div class="fc-study-divider"></div>
+        <div class="fc-study-a">${esc(card.answer)}</div>
+        ${noteLink}
+      </div>
+      <div class="fc-rate-row">
+        <button class="fc-rate-btn fc-rate-forgot" onclick="fcRate('forgot')">Forgot<small>again soon</small></button>
+        <button class="fc-rate-btn fc-rate-hard" onclick="fcRate('hard')">Hard<small>sooner</small></button>
+        <button class="fc-rate-btn fc-rate-good" onclick="fcRate('good')">Good<small>on track</small></button>
+        <button class="fc-rate-btn fc-rate-easy" onclick="fcRate('easy')">Easy<small>much later</small></button>
+      </div>
+      <div class="fc-study-hint">Keys 1–4 to rate</div>`;
+  }
+  const foot=document.getElementById('fc-study-foot');
+  if(fcStudyMode==='browse'){
+    foot.innerHTML=`
+      <button class="fc-study-nav-btn" onclick="fcStudyPrev()" ${fcStudyIndex===0?'disabled':''}>← Prev</button>
+      <button class="fc-study-nav-btn" onclick="fcStudyRandom()">🔀 Random</button>
+      <button class="fc-study-nav-btn" onclick="fcStudyNext()" ${fcStudyIndex===fcStudyQueue.length-1?'disabled':''}>Next →</button>`;
+  }else{
+    foot.innerHTML=`<span style="font-size:.76rem;color:var(--txt3)">Rate the card to continue</span>`;
+  }
+}
+function fcReveal(){ fcRevealed=true; fcRenderStudyCard(); }
+function fcStudyPrev(){ if(fcStudyIndex>0){fcStudyIndex--;fcRevealed=false;fcRenderStudyCard();} }
+function fcStudyNext(){ if(fcStudyIndex<fcStudyQueue.length-1){fcStudyIndex++;fcRevealed=false;fcRenderStudyCard();}else{fcRenderStudyComplete();} }
+function fcStudyRandom(){
+  if(fcStudyQueue.length<2)return;
+  let i; do{i=Math.floor(Math.random()*fcStudyQueue.length);}while(i===fcStudyIndex);
+  fcStudyIndex=i; fcRevealed=false; fcRenderStudyCard();
+}
+async function fcRate(rating){
+  const card=fcCurrentCard(); if(!card)return;
+  const updated=await(await fetch(`/flashcards/${card.id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating})})).json();
+  const idx=allFlashcards.findIndex(c=>c.id===card.id); if(idx>=0)allFlashcards[idx]=updated;
+  if(fcStudyIndex<fcStudyQueue.length-1){
+    fcStudyQueue[fcStudyIndex]=updated;
+    fcStudyIndex++; fcRevealed=false; fcRenderStudyCard();
+  }else{
+    fcRenderStudyComplete();
+  }
+}
+function fcRenderStudyComplete(){
+  document.getElementById('fc-study-progress').textContent='Done';
+  document.getElementById('fc-study-body').innerHTML=`
+    <div class="fc-complete">
+      <div style="font-size:3rem">🎉</div>
+      <div style="font-size:1.2rem;font-weight:800">All done!</div>
+      <div style="color:var(--txt2);font-size:.85rem">You've been through every card in this set.</div>
+      <button class="fc-start-btn" onclick="fcCloseStudy()">Back to Flashcards</button>
+    </div>`;
+  document.getElementById('fc-study-foot').innerHTML='';
+}
+async function fcToggleFavoriteCurrent(){
+  const card=fcCurrentCard(); if(!card)return;
+  const updated=await(await fetch(`/flashcards/${card.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_favorite:!card.is_favorite})})).json();
+  fcStudyQueue[fcStudyIndex]=updated;
+  const idx=allFlashcards.findIndex(c=>c.id===card.id); if(idx>=0)allFlashcards[idx]=updated;
+  fcRenderStudyCard();
+}
+function fcEditCurrent(){ const card=fcCurrentCard(); if(card)fcOpenEditModal(card.id); }
+async function fcDeleteCurrent(){
+  const card=fcCurrentCard(); if(!card)return;
+  if(!confirm('Delete this flashcard?'))return;
+  await fetch(`/flashcards/${card.id}`,{method:'DELETE'});
+  allFlashcards=allFlashcards.filter(c=>c.id!==card.id);
+  fcStudyQueue.splice(fcStudyIndex,1);
+  if(fcStudyIndex>=fcStudyQueue.length) fcStudyIndex=Math.max(0,fcStudyQueue.length-1);
+  fcRevealed=false;
+  fcRenderStudyCard();
+}
+function fcOpenSourceNote(pageId){
+  const found=findPage(pageId);
+  if(!found){showToast('Source note no longer exists');return;}
+  fcCloseStudy();
+  switchView('notes');
+  setTimeout(()=>nbOpenPage(found.book.id,found.chapter.id,pageId),100);
+}
+
+// ── AI Settings ────────────────────────────────────────────────────────────────
+let aiSettings={base_url:'http://localhost:11434',model:'qwen3:8b'};
+
+async function loadAiSettings(){
+  try{ aiSettings=await(await fetch('/ai/settings')).json(); }catch(e){}
+}
+
+function openAiSettingsModal(){
+  document.getElementById('ai-url-inp').value=aiSettings.base_url;
+  document.getElementById('ai-model-inp').value=aiSettings.model;
+  document.getElementById('ai-model-inp').style.display='';
+  document.getElementById('ai-model-select').style.display='none';
+  document.getElementById('ai-status-box').innerHTML='';
+  document.getElementById('ai-settings-overlay').classList.add('open');
+  aiTestConnection();
+}
+function closeAiSettingsModal(){document.getElementById('ai-settings-overlay').classList.remove('open');}
+
+function aiCurrentModelValue(){
+  const sel=document.getElementById('ai-model-select'),inp=document.getElementById('ai-model-inp');
+  return (sel.style.display!=='none'?sel.value:inp.value).trim();
+}
+
+async function aiTestConnection(){
+  const box=document.getElementById('ai-status-box');
+  const btn=document.getElementById('ai-test-btn');
+  const url=document.getElementById('ai-url-inp').value.trim()||aiSettings.base_url;
+  const model=aiCurrentModelValue()||aiSettings.model;
+  box.innerHTML=`<div class="ai-status-box ai-status-pending">Testing connection…</div>`;
+  btn.disabled=true;
+  try{
+    const res=await fetch('/ai/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:url,model})});
+    const data=await res.json();
+    if(data.connected){
+      const sel=document.getElementById('ai-model-select'), inp=document.getElementById('ai-model-inp');
+      sel.innerHTML=data.models.map(m=>`<option value="${esc(m)}" ${m===model?'selected':''}>${esc(m)}</option>`).join('');
+      sel.style.display=''; inp.style.display='none';
+      box.innerHTML=`<div class="ai-status-box ai-status-ok">
+        <span>✓ Connected — ${data.models.length} model${data.models.length!==1?'s':''} available</span>
+        <span class="ai-status-models">${data.model_available?`✓ "${esc(model)}" is installed and ready`:`⚠ "${esc(model)}" is not installed — pull it with Ollama, or pick one from the list above`}</span>
+      </div>`;
+    }else{
+      box.innerHTML=`<div class="ai-status-box ai-status-err">✗ ${esc(data.error)}</div>`;
+    }
+  }catch(e){
+    box.innerHTML=`<div class="ai-status-box ai-status-err">✗ Request failed: ${esc(e.message)}</div>`;
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function aiSaveSettings(){
+  const url=document.getElementById('ai-url-inp').value.trim();
+  const model=aiCurrentModelValue();
+  if(!url||!model){showToast('URL and model are required');return;}
+  aiSettings=await(await fetch('/ai/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:url,model})})).json();
+  showToast('🤖 AI settings saved');
+  closeAiSettingsModal();
+}
+
 // ── Keyboard shortcut modal ───────────────────────────────────────────────────
 function openShortcutModal(){document.getElementById('shortcut-overlay').classList.add('open');}
 function closeShortcutModal(){document.getElementById('shortcut-overlay').classList.remove('open');}
@@ -4405,13 +4814,25 @@ function closeShortcutModal(){document.getElementById('shortcut-overlay').classL
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
   const inInput=document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT';
-  if(e.key==='Escape'){closePanel();closeRemModal();closeSRemModal();closeAlertOverlay();hideStatusMenu();clearSel();closeShortcutModal();closeMeetingModal();closeCalDay();closeTaskPage();}
+  if(e.key==='Escape'){closePanel();closeRemModal();closeSRemModal();closeAlertOverlay();hideStatusMenu();clearSel();closeShortcutModal();closeMeetingModal();closeCalDay();closeTaskPage();fcCloseEditModal();fcCloseStudy();closeAiSettingsModal();}
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.getElementById('search').focus();}
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     if(document.getElementById('detail-panel').classList.contains('open'))savePanel();
   }
   if(e.key==='n'&&!e.ctrlKey&&!e.metaKey&&!inInput){openPanel(null);}
   if(e.key==='?'&&!e.ctrlKey&&!e.metaKey&&!inInput){e.preventDefault();openShortcutModal();}
+  // Flashcard study viewer shortcuts
+  if(!inInput&&document.getElementById('fc-study')?.classList.contains('open')){
+    if(e.key===' '){e.preventDefault();if(!fcRevealed)fcReveal();}
+    else if(fcRevealed&&e.key==='1'){fcRate('forgot');}
+    else if(fcRevealed&&e.key==='2'){fcRate('hard');}
+    else if(fcRevealed&&e.key==='3'){fcRate('good');}
+    else if(fcRevealed&&e.key==='4'){fcRate('easy');}
+    else if(e.key==='ArrowLeft'&&fcStudyMode==='browse'){fcStudyPrev();}
+    else if(e.key==='ArrowRight'&&fcStudyMode==='browse'){fcStudyNext();}
+    else if(e.key==='r'&&fcStudyMode==='browse'){fcStudyRandom();}
+    else if(e.key==='f'){fcToggleFavoriteCurrent();}
+  }
 });
 </script>
 </body>
