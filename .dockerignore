@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+tasks.db
+tasks.db.pretest_backup
+backup_logs/
+.git/
+.vscode/
+.claude/
+*.log

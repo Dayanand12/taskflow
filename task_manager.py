@@ -3,8 +3,11 @@ import sqlite3
 import calendar
 import csv
 import io
+import json
 from datetime import datetime, timedelta
-import ai_service
+import os
+from dotenv import load_dotenv
+load_dotenv()
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -14,7 +17,7 @@ except ImportError:
     HAS_XLSX = False
 
 app = Flask(__name__)
-DB_PATH = "tasks.db"
+DB_PATH = os.environ.get("DB_PATH", "tasks.db")
 
 
 def get_db():
@@ -173,44 +176,50 @@ def init_db():
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (chapter_id) REFERENCES note_chapters(id) ON DELETE CASCADE
             );
-            CREATE TABLE IF NOT EXISTS flashcard_categories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                color TEXT NOT NULL DEFAULT '#3b82f6',
-                position INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL
-            );
-            CREATE TABLE IF NOT EXISTS flashcards (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                category_id INTEGER DEFAULT NULL,
-                question TEXT NOT NULL,
-                answer TEXT NOT NULL,
-                source_note_id INTEGER DEFAULT NULL,
-                source_note_hash TEXT DEFAULT NULL,
-                is_favorite INTEGER NOT NULL DEFAULT 0,
-                is_ai_generated INTEGER NOT NULL DEFAULT 0,
-                review_count INTEGER NOT NULL DEFAULT 0,
-                ease_factor REAL NOT NULL DEFAULT 2.5,
-                interval_days REAL NOT NULL DEFAULT 0,
-                last_reviewed_at TEXT DEFAULT NULL,
-                next_review_at TEXT DEFAULT NULL,
-                last_rating TEXT DEFAULT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (category_id) REFERENCES flashcard_categories(id) ON DELETE SET NULL,
-                FOREIGN KEY (source_note_id) REFERENCES note_pages(id) ON DELETE SET NULL
-            );
             CREATE TABLE IF NOT EXISTS ai_settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 base_url TEXT NOT NULL DEFAULT 'http://localhost:11434',
                 model TEXT NOT NULL DEFAULT 'qwen3:8b',
                 updated_at TEXT NOT NULL
             );
+            CREATE TABLE IF NOT EXISTS ai_conversations (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                context_type TEXT NOT NULL,
+                context_id INTEGER NOT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                UNIQUE(context_type, context_id)
+            );
+            CREATE TABLE IF NOT EXISTS ai_messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                mode TEXT DEFAULT NULL,
+                content TEXT NOT NULL,
+                questions TEXT DEFAULT NULL,
+                sections TEXT DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE CASCADE
+            );
+            CREATE TABLE IF NOT EXISTS ai_suggestions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                conversation_id INTEGER NOT NULL,
+                message_id INTEGER DEFAULT NULL,
+                title TEXT NOT NULL,
+                reasoning TEXT DEFAULT '',
+                kind TEXT NOT NULL DEFAULT 'step',
+                status TEXT NOT NULL DEFAULT 'pending',
+                created_task_id INTEGER DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (conversation_id) REFERENCES ai_conversations(id) ON DELETE CASCADE,
+                FOREIGN KEY (message_id) REFERENCES ai_messages(id) ON DELETE SET NULL
+            );
         """)
         if not conn.execute("SELECT id FROM ai_settings WHERE id=1").fetchone():
             conn.execute(
                 "INSERT INTO ai_settings (id,base_url,model,updated_at) VALUES (1,?,?,?)",
-                (ai_service.DEFAULT_BASE_URL, ai_service.DEFAULT_MODEL, _now()),
+                ("http://localhost:11434", "qwen3:8b", _now()),
             )
         for col, defn in [
             ("priority",           "TEXT NOT NULL DEFAULT 'medium'"),
@@ -234,6 +243,23 @@ def init_db():
         for col, defn in [("parallel_group", "TEXT DEFAULT NULL")]:
             try:
                 conn.execute(f"ALTER TABLE task_steps ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
+        for col, defn in [
+            ("provider",        "TEXT NOT NULL DEFAULT 'ollama'"),
+            ("anthropic_model", "TEXT NOT NULL DEFAULT 'claude-sonnet-5'"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE ai_settings ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
+        for col, defn in [
+            ("patch_action", "TEXT DEFAULT NULL"),
+            ("patch_html",   "TEXT DEFAULT NULL"),
+            ("patch_find",   "TEXT DEFAULT NULL"),
+        ]:
+            try:
+                conn.execute(f"ALTER TABLE ai_suggestions ADD COLUMN {col} {defn}")
             except Exception:
                 pass
         conn.commit()
@@ -277,6 +303,15 @@ def _migrate_step_points_and_milestones(conn):
         conn.execute("ALTER TABLE tasks DROP COLUMN milestone_id")
         conn.commit()
 
+    # Flashcards module was removed entirely (superseded by the AI Assistant) --
+    # drop its tables and any data with them.
+    if "flashcards" in tables:
+        conn.execute("DROP TABLE flashcards")
+        conn.commit()
+    if "flashcard_categories" in tables:
+        conn.execute("DROP TABLE flashcard_categories")
+        conn.commit()
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -289,30 +324,6 @@ def _log(conn, task_id, action, detail=None):
         "INSERT INTO activity_log (task_id, action, detail, created_at) VALUES (?,?,?,?)",
         (task_id, action, detail, _now()),
     )
-
-
-def _schedule_review(ease_factor, interval_days, review_count, rating):
-    """Simplified SM-2-style spaced repetition. Returns (new_ease, new_interval, next_review_at_iso)."""
-    ef = ease_factor or 2.5
-    interval = interval_days or 0
-    is_new = review_count == 0
-
-    if rating == "forgot":
-        interval = 0
-        ef = max(1.3, ef - 0.2)
-    elif rating == "hard":
-        interval = 1 if is_new else max(1, interval * 1.2)
-        ef = max(1.3, ef - 0.15)
-    elif rating == "good":
-        interval = 1 if is_new else interval * ef
-    elif rating == "easy":
-        interval = 4 if is_new else interval * ef * 1.3
-        ef = ef + 0.15
-    else:
-        raise ValueError(f"Unknown rating: {rating}")
-
-    next_review = datetime.now() + timedelta(days=interval)
-    return round(ef, 3), round(interval, 3), next_review.isoformat(timespec="seconds")
 
 
 def _add_months(dt, n):
@@ -519,7 +530,9 @@ def _has_dependency_path(conn, start_id, target_id, visited=None):
 
 @app.route("/")
 def index():
-    return render_template("task_manager.html")
+    resp = Response(render_template("task_manager.html"))
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return resp
 
 
 # ── Tasks ─────────────────────────────────────────────────────────────────────
@@ -979,250 +992,6 @@ def delete_page(pid):
         return jsonify({"success": True})
 
 
-# ── Flashcards: categories ──────────────────────────────────────────────────────
-
-@app.route("/flashcards/categories")
-def get_flashcard_categories():
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT c.*, "
-            "(SELECT COUNT(*) FROM flashcards f WHERE f.category_id=c.id) AS card_total, "
-            "(SELECT COUNT(*) FROM flashcards f WHERE f.category_id=c.id AND (f.next_review_at IS NULL OR f.next_review_at<=?)) AS card_due "
-            "FROM flashcard_categories c ORDER BY c.position, c.id",
-            (_now(),),
-        ).fetchall()
-        return jsonify([dict(r) for r in rows])
-
-
-@app.route("/flashcards/categories", methods=["POST"])
-def create_flashcard_category():
-    data = request.get_json() or {}
-    name = data.get("name", "").strip()
-    if not name:
-        return jsonify({"error": "Name required"}), 400
-    with get_db() as conn:
-        pos = conn.execute("SELECT COALESCE(MAX(position),0)+1 FROM flashcard_categories").fetchone()[0]
-        try:
-            cur = conn.execute(
-                "INSERT INTO flashcard_categories (name,color,position,created_at) VALUES (?,?,?,?)",
-                (name, data.get("color", "#3b82f6") or "#3b82f6", pos, _now()),
-            )
-            conn.commit()
-            row = conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cur.lastrowid,)).fetchone()
-            rd = dict(row); rd["card_total"] = 0; rd["card_due"] = 0
-            return jsonify(rd), 201
-        except sqlite3.IntegrityError:
-            row = conn.execute("SELECT * FROM flashcard_categories WHERE name=?", (name,)).fetchone()
-            rd = dict(row); rd["card_total"] = 0; rd["card_due"] = 0
-            return jsonify(rd)
-
-
-@app.route("/flashcards/categories/<int:cid>", methods=["PUT"])
-def update_flashcard_category(cid):
-    data = request.get_json() or {}
-    with get_db() as conn:
-        c = conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cid,)).fetchone()
-        if not c:
-            return jsonify({"error": "Not found"}), 404
-        cd = dict(c)
-        conn.execute(
-            "UPDATE flashcard_categories SET name=?,color=? WHERE id=?",
-            (data.get("name", cd["name"]).strip() or cd["name"],
-             data.get("color", cd["color"]) or cd["color"], cid),
-        )
-        conn.commit()
-        return jsonify(dict(conn.execute("SELECT * FROM flashcard_categories WHERE id=?", (cid,)).fetchone()))
-
-
-@app.route("/flashcards/categories/<int:cid>", methods=["DELETE"])
-def delete_flashcard_category(cid):
-    with get_db() as conn:
-        if not conn.execute("SELECT id FROM flashcard_categories WHERE id=?", (cid,)).fetchone():
-            return jsonify({"error": "Not found"}), 404
-        conn.execute("UPDATE flashcards SET category_id=NULL WHERE category_id=?", (cid,))
-        conn.execute("DELETE FROM flashcard_categories WHERE id=?", (cid,))
-        conn.commit()
-        return jsonify({"success": True})
-
-
-# ── Flashcards: cards ────────────────────────────────────────────────────────────
-
-def _enrich_flashcard(conn, row):
-    fd = dict(row)
-    cat = None
-    if fd.get("category_id"):
-        crow = conn.execute("SELECT id,name,color FROM flashcard_categories WHERE id=?", (fd["category_id"],)).fetchone()
-        cat = dict(crow) if crow else None
-    fd["category"] = cat
-    note = None
-    if fd.get("source_note_id"):
-        nrow = conn.execute(
-            "SELECT np.id, np.title, np.chapter_id, nc.book_id "
-            "FROM note_pages np JOIN note_chapters nc ON nc.id=np.chapter_id WHERE np.id=?",
-            (fd["source_note_id"],),
-        ).fetchone()
-        note = dict(nrow) if nrow else None
-    fd["source_note"] = note
-    fd["is_due"] = (not fd.get("next_review_at")) or fd["next_review_at"] <= _now()
-    return fd
-
-
-@app.route("/flashcards")
-def get_flashcards():
-    category_id = request.args.get("category_id", type=int)
-    q = request.args.get("q", "").strip()
-    favorite = request.args.get("favorite")
-    with get_db() as conn:
-        sql = "SELECT * FROM flashcards WHERE 1=1"
-        params = []
-        if category_id:
-            sql += " AND category_id=?"; params.append(category_id)
-        if q:
-            sql += " AND (question LIKE ? OR answer LIKE ?)"
-            like = f"%{q}%"; params += [like, like]
-        if favorite:
-            sql += " AND is_favorite=1"
-        sql += " ORDER BY created_at DESC"
-        rows = conn.execute(sql, params).fetchall()
-        return jsonify([_enrich_flashcard(conn, r) for r in rows])
-
-
-@app.route("/flashcards/due")
-def get_due_flashcards():
-    with get_db() as conn:
-        rows = conn.execute(
-            "SELECT * FROM flashcards WHERE next_review_at IS NULL OR next_review_at<=? ORDER BY next_review_at IS NULL DESC, next_review_at",
-            (_now(),),
-        ).fetchall()
-        cards = [_enrich_flashcard(conn, r) for r in rows]
-        by_cat = {}
-        for c in cards:
-            key = c["category"]["name"] if c["category"] else "Uncategorized"
-            by_cat.setdefault(key, {"category": c["category"], "cards": []})
-            by_cat[key]["cards"].append(c)
-        return jsonify({"total": len(cards), "by_category": list(by_cat.values()), "cards": cards})
-
-
-@app.route("/flashcards", methods=["POST"])
-def create_flashcard():
-    data = request.get_json() or {}
-    question = data.get("question", "").strip()
-    answer = data.get("answer", "").strip()
-    if not question or not answer:
-        return jsonify({"error": "Question and answer are required"}), 400
-    now = _now()
-    with get_db() as conn:
-        cur = conn.execute(
-            "INSERT INTO flashcards (category_id,question,answer,source_note_id,source_note_hash,"
-            "is_ai_generated,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?)",
-            (data.get("category_id") or None, question, answer,
-             data.get("source_note_id") or None, data.get("source_note_hash") or None,
-             1 if data.get("is_ai_generated") else 0, now, now),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (cur.lastrowid,)).fetchone()
-        return jsonify(_enrich_flashcard(conn, row)), 201
-
-
-@app.route("/flashcards/<int:fid>", methods=["PUT"])
-def update_flashcard(fid):
-    data = request.get_json() or {}
-    with get_db() as conn:
-        f = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
-        if not f:
-            return jsonify({"error": "Not found"}), 404
-        fd = dict(f)
-        conn.execute(
-            "UPDATE flashcards SET question=?,answer=?,category_id=?,is_favorite=?,updated_at=? WHERE id=?",
-            (data.get("question", fd["question"]).strip() or fd["question"],
-             data.get("answer", fd["answer"]).strip() or fd["answer"],
-             data.get("category_id", fd["category_id"]) or None,
-             1 if data.get("is_favorite", fd["is_favorite"]) else 0,
-             _now(), fid),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
-        return jsonify(_enrich_flashcard(conn, row))
-
-
-@app.route("/flashcards/<int:fid>", methods=["DELETE"])
-def delete_flashcard(fid):
-    with get_db() as conn:
-        if not conn.execute("SELECT id FROM flashcards WHERE id=?", (fid,)).fetchone():
-            return jsonify({"error": "Not found"}), 404
-        conn.execute("DELETE FROM flashcards WHERE id=?", (fid,))
-        conn.commit()
-        return jsonify({"success": True})
-
-
-@app.route("/flashcards/<int:fid>/review", methods=["POST"])
-def review_flashcard(fid):
-    data = request.get_json() or {}
-    rating = data.get("rating")
-    if rating not in ("forgot", "hard", "good", "easy"):
-        return jsonify({"error": "rating must be one of forgot/hard/good/easy"}), 400
-    with get_db() as conn:
-        f = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
-        if not f:
-            return jsonify({"error": "Not found"}), 404
-        fd = dict(f)
-        ef, interval, next_review = _schedule_review(fd["ease_factor"], fd["interval_days"], fd["review_count"], rating)
-        now = _now()
-        conn.execute(
-            "UPDATE flashcards SET review_count=review_count+1,ease_factor=?,interval_days=?,"
-            "last_reviewed_at=?,next_review_at=?,last_rating=?,updated_at=? WHERE id=?",
-            (ef, interval, now, next_review, rating, now, fid),
-        )
-        conn.commit()
-        row = conn.execute("SELECT * FROM flashcards WHERE id=?", (fid,)).fetchone()
-        return jsonify(_enrich_flashcard(conn, row))
-
-
-# ── AI service settings ─────────────────────────────────────────────────────────
-
-@app.route("/ai/settings")
-def get_ai_settings():
-    with get_db() as conn:
-        row = conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()
-        return jsonify(dict(row))
-
-
-@app.route("/ai/settings", methods=["PUT"])
-def update_ai_settings():
-    data = request.get_json() or {}
-    with get_db() as conn:
-        row = conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()
-        rd = dict(row)
-        base_url = (data.get("base_url", rd["base_url"]) or "").strip() or rd["base_url"]
-        model = (data.get("model", rd["model"]) or "").strip() or rd["model"]
-        conn.execute(
-            "UPDATE ai_settings SET base_url=?,model=?,updated_at=? WHERE id=1",
-            (base_url, model, _now()),
-        )
-        conn.commit()
-        return jsonify(dict(conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone()))
-
-
-@app.route("/ai/test", methods=["POST"])
-def test_ai_connection():
-    """Test connectivity to Ollama. Uses the base_url in the request body if given
-    (so the UI can test before saving), otherwise falls back to the saved setting."""
-    data = request.get_json() or {}
-    with get_db() as conn:
-        settings = dict(conn.execute("SELECT * FROM ai_settings WHERE id=1").fetchone())
-    base_url = (data.get("base_url") or "").strip() or settings["base_url"]
-    ok, result = ai_service.test_connection(base_url)
-    if not ok:
-        return jsonify({"connected": False, "error": result["error"], "models": []})
-    configured_model = (data.get("model") or "").strip() or settings["model"]
-    return jsonify({
-        "connected": True,
-        "models": result["models"],
-        "model_available": configured_model in result["models"],
-        "configured_model": configured_model,
-    })
-
-
 # ── Activity log ──────────────────────────────────────────────────────────────
 
 @app.route("/tasks/<int:tid>/activity")
@@ -1631,6 +1400,21 @@ def add_step(tid):
         return jsonify(sd), 201
 
 
+@app.route("/steps/<int:sid>")
+def get_step(sid):
+    with get_db() as conn:
+        s = conn.execute("SELECT * FROM task_steps WHERE id=?", (sid,)).fetchone()
+        if not s:
+            return jsonify({"error": "Not found"}), 404
+        sd = dict(s)
+        step_tasks = conn.execute("SELECT * FROM tasks WHERE step_id=? ORDER BY created_at", (sid,)).fetchall()
+        enriched = _enrich(conn, step_tasks)
+        sd["tasks"]      = enriched
+        sd["task_total"] = len(enriched)
+        sd["task_done"]  = sum(1 for t in enriched if t["status"] == "completed")
+        return jsonify(sd)
+
+
 @app.route("/steps/<int:sid>", methods=["PUT"])
 def update_step(sid):
     data = request.get_json() or {}
@@ -1831,6 +1615,7 @@ def export_xlsx():
     )
 
 
+init_db()
+
 if __name__ == "__main__":
-    init_db()
     app.run(debug=True, port=5001)

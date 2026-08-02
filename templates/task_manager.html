@@ -204,6 +204,14 @@ header{background:var(--surf);border-bottom:1px solid var(--border);padding:10px
 
 .task-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
 
+/* Task cards nested inside a workflow step's task list are much narrower than
+   the main list view -- squeezing the status/due/action column beside the
+   title there breaks the title down to a sliver, causing it to word-wrap
+   letter-by-letter. Wrap the right-side column onto its own full-width row
+   below the title instead, same fix as the step card header above. */
+.step-task-list .task-card{flex-wrap:wrap}
+.step-task-list .task-right{flex-basis:100%;flex-direction:row;justify-content:flex-end;align-items:center}
+
 /* Hover-revealed action buttons */
 .task-actions{display:flex;gap:3px;opacity:0;transition:opacity .15s;pointer-events:none}
 .task-card:hover .task-actions,.task-card.selected .task-actions,.task-card.active-panel .task-actions{opacity:1;pointer-events:all}
@@ -577,15 +585,6 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 /* ── Meeting modal ────────────────────────────────────────────────────────── */
 #meeting-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:300;align-items:center;justify-content:center}
 #meeting-overlay.open{display:flex}
-#fc-edit-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:340;align-items:center;justify-content:center}
-#fc-edit-overlay.open{display:flex}
-#ai-settings-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:340;align-items:center;justify-content:center}
-#ai-settings-overlay.open{display:flex}
-.ai-status-box{border-radius:9px;padding:10px 12px;font-size:.8rem;display:flex;flex-direction:column;gap:4px}
-.ai-status-ok{background:rgba(34,197,94,.12);border:1px solid rgba(34,197,94,.35);color:#22c55e}
-.ai-status-err{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);color:#ef4444}
-.ai-status-pending{background:var(--surf2);border:1px solid var(--border);color:var(--txt2)}
-.ai-status-models{font-size:.7rem;color:var(--txt2);font-weight:400}
 .meeting-modal{background:var(--surf);border:1px solid var(--border);border-radius:13px;width:100%;max-width:500px;margin:14px;display:flex;flex-direction:column;overflow:hidden;max-height:90vh}
 .mtg-modal-head{padding:16px 18px 0;border-bottom:1px solid var(--border);padding-bottom:12px}
 .mtg-modal-title{font-size:.95rem;font-weight:700;margin-bottom:0;display:flex;align-items:center;gap:8px}
@@ -671,7 +670,9 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .tp-add-inp:focus{border-color:var(--accent)}
 .tp-add-inp::placeholder{color:var(--txt3)}
 .tp-step-card{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:10px 11px;display:flex;flex-direction:column;gap:6px}
-.tp-step-hdr{display:flex;align-items:flex-start;gap:7px}
+.tp-step-hdr{display:flex;flex-direction:column;gap:6px}
+.tp-step-hdr-top{display:flex;align-items:flex-start;gap:7px}
+.tp-step-hdr-meta{display:flex;align-items:center;gap:7px}
 .tp-step-title{flex:1;font-size:.82rem;font-weight:700;color:var(--txt);word-break:break-word;line-height:1.3}
 .tp-step-sel{background:var(--bg);border:1px solid var(--border);color:var(--txt2);padding:3px 6px;border-radius:6px;font-size:.68rem;outline:none;cursor:pointer;font-family:inherit;flex-shrink:0}
 .tp-del-btn{background:transparent;border:none;color:var(--txt3);padding:2px 5px;cursor:pointer;font-size:.8rem;flex-shrink:0;line-height:1;border-radius:4px;transition:color .12s}
@@ -844,6 +845,60 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .notes-layout.read-mode #ne-body blockquote{border-left:4px solid var(--accent);padding:8px 16px;background:rgba(59,130,246,.06);border-radius:0 8px 8px 0;margin:12px 0}
 .notes-layout.read-mode .ne-topbar{gap:8px;padding:10px 16px}
 
+/* ── Note component vocabulary (.nx-*): colored cards, sections, definitions,
+   code, callouts and diagrams. The Notes Copilot AI feature that used to write
+   these has been removed, but existing note pages may still contain this
+   markup from before, and a user can still type it by hand -- keep the
+   styling so that content keeps rendering correctly. Additive on top of the
+   plain .ne-body typography above. ─────────────────────────────────────── */
+:root{
+  --nx-blue:#3b82f6; --nx-green:#22c55e; --nx-yellow:#f59e0b; --nx-red:#ef4444;
+  --nx-purple:#8b5cf6; --nx-pink:#ec4899; --nx-teal:#14b8a6; --nx-default:#475569;
+}
+.nx-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:2px 0 14px;margin:14px 0;overflow:hidden}
+.nx-header{background:var(--bg);color:#fff;padding:14px 18px;margin:-2px 0 12px;border-bottom:3px solid var(--nx-default)}
+.nx-header h2{margin:0;font-size:1.15rem;font-weight:800;color:#f1f5f9}
+.nx-header p{margin:.3em 0 0;font-size:.8rem;color:#94a3b8;font-weight:500}
+.nx-header.accent-blue{border-bottom-color:var(--nx-blue)}
+.nx-header.accent-green{border-bottom-color:var(--nx-green)}
+.nx-header.accent-yellow{border-bottom-color:var(--nx-yellow)}
+.nx-header.accent-red{border-bottom-color:var(--nx-red)}
+.nx-header.accent-purple{border-bottom-color:var(--nx-purple)}
+.nx-header.accent-pink{border-bottom-color:var(--nx-pink)}
+.nx-header.accent-teal{border-bottom-color:var(--nx-teal)}
+.nx-section-num{display:flex;align-items:center;gap:10px;margin:16px 18px 8px}
+.nx-section-num .nx-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--nx-default);color:#fff;font-size:.72rem;font-weight:800;flex-shrink:0}
+.nx-section-num h3{margin:0;font-size:.95rem;font-weight:700;color:var(--txt)}
+.nx-section-num.accent-blue .nx-num{background:var(--nx-blue)}
+.nx-section-num.accent-green .nx-num{background:var(--nx-green)}
+.nx-section-num.accent-yellow .nx-num{background:var(--nx-yellow)}
+.nx-section-num.accent-red .nx-num{background:var(--nx-red)}
+.nx-section-num.accent-purple .nx-num{background:var(--nx-purple)}
+.nx-section-num.accent-pink .nx-num{background:var(--nx-pink)}
+.nx-section-num.accent-teal .nx-num{background:var(--nx-teal)}
+.nx-def-row{display:flex;align-items:flex-start;gap:10px;margin:6px 18px;padding:8px 10px;background:var(--surf2);border-radius:8px}
+.nx-def-tab{width:4px;align-self:stretch;border-radius:3px;background:var(--nx-default);flex-shrink:0}
+.nx-def-tab.accent-blue{background:var(--nx-blue)} .nx-def-tab.accent-green{background:var(--nx-green)}
+.nx-def-tab.accent-yellow{background:var(--nx-yellow)} .nx-def-tab.accent-red{background:var(--nx-red)}
+.nx-def-tab.accent-purple{background:var(--nx-purple)} .nx-def-tab.accent-pink{background:var(--nx-pink)}
+.nx-def-tab.accent-teal{background:var(--nx-teal)}
+.nx-def-term{font-weight:700;font-size:.82rem;color:var(--txt);white-space:nowrap}
+.nx-def-text{font-size:.8rem;color:var(--txt2);line-height:1.5}
+.nx-code{display:block;background:#0d1117;color:#c9d1d9;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin:10px 18px;font-family:monospace;font-size:.8rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.nx-callout{margin:10px 18px;padding:9px 12px;border-radius:8px;font-size:.82rem;line-height:1.5}
+.nx-callout.good{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.35);color:var(--txt)}
+.nx-callout.good::before{content:"✓ ";font-weight:800;color:var(--nx-green)}
+.nx-callout.bad{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.35);color:var(--txt)}
+.nx-callout.bad::before{content:"⚠ ";font-weight:800;color:var(--nx-red)}
+.nx-diagram-box{margin:12px 18px;padding:14px;border:1.5px solid var(--nx-default);border-radius:10px;background:var(--surf2);text-align:center}
+.nx-diagram-box.accent-blue{border-color:var(--nx-blue)} .nx-diagram-box.accent-green{border-color:var(--nx-green)}
+.nx-diagram-box.accent-yellow{border-color:var(--nx-yellow)} .nx-diagram-box.accent-red{border-color:var(--nx-red)}
+.nx-diagram-box.accent-purple{border-color:var(--nx-purple)} .nx-diagram-box.accent-pink{border-color:var(--nx-pink)}
+.nx-diagram-box.accent-teal{border-color:var(--nx-teal)}
+.nx-diagram-box .nx-mermaid-source{display:none}
+.nx-diagram-box .nx-diagram-placeholder{color:var(--txt3);font-size:.78rem;font-style:italic;padding:16px}
+.nx-diagram-box .nx-mermaid-rendered svg{max-width:100%;height:auto}
+
 /* ── UI improvements: task cards ─────────────────────────────────────────────── */
 .task-card{transition:box-shadow .15s,transform .12s!important}
 .task-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.10);transform:translateY(-1px)}
@@ -903,9 +958,16 @@ header{box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,.04)}
 .nb-book-act-btn.del:hover,.nb-ch-act-btn.del:hover,.nb-pg-act-btn:hover{color:var(--danger)}
 
 /* Page level */
-.nb-pg-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;transition:background .12s}
+.nb-pg-item{display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:6px;cursor:pointer;transition:background .12s;border-left:3px solid transparent}
 .nb-pg-item:hover{background:var(--surf)}
 .nb-pg-item.active{background:rgba(59,130,246,.08);border-left:2px solid var(--accent);padding-left:6px}
+.nb-pg-item[data-color="blue"]:not(.active){border-left-color:var(--nx-blue)}
+.nb-pg-item[data-color="green"]:not(.active){border-left-color:var(--nx-green)}
+.nb-pg-item[data-color="yellow"]:not(.active){border-left-color:var(--nx-yellow)}
+.nb-pg-item[data-color="red"]:not(.active){border-left-color:var(--nx-red)}
+.nb-pg-item[data-color="purple"]:not(.active){border-left-color:var(--nx-purple)}
+.nb-pg-item[data-color="pink"]:not(.active){border-left-color:var(--nx-pink)}
+.nb-pg-item[data-color="teal"]:not(.active){border-left-color:var(--nx-teal)}
 .nb-pg-dot{width:5px;height:5px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background .15s}
 .nb-pg-item.active .nb-pg-dot{background:var(--accent)}
 .nb-pg-title{flex:1;font-size:.73rem;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
@@ -1041,76 +1103,16 @@ body.sidebar-open #main-wrap{margin-right:252px}
 .dep-add-row{display:flex;gap:6px;margin-top:4px}
 .dep-empty{font-size:.72rem;color:var(--txt3);font-style:italic;margin-bottom:4px}
 
-/* ── Flashcards ─────────────────────────────────────────────────────────── */
-.fc-layout{display:flex;height:calc(100vh - var(--hdr-h));overflow:hidden}
-.fc-sidebar{width:220px;flex-shrink:0;border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
-.fc-cat-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:8px;cursor:pointer;font-size:.82rem;color:var(--txt2)}
-.fc-cat-item:hover{background:var(--surf2)}
-.fc-cat-item.active{background:var(--accent);color:#fff}
-.fc-cat-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.fc-cat-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-cat-count{font-size:.68rem;opacity:.75}
-.fc-cat-del{background:none;border:none;color:inherit;opacity:0;cursor:pointer;font-size:.7rem;padding:0 2px;flex-shrink:0}
-.fc-cat-item:hover .fc-cat-del{opacity:.6}
-.fc-cat-del:hover{opacity:1!important}
-.fc-cat-add-row{display:flex;gap:5px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
-.fc-main{flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:12px}
-.fc-toolbar{display:flex;gap:8px;align-items:center}
-.fc-search{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 10px;color:var(--txt);font-size:.82rem;outline:none}
-.fc-search:focus{border-color:var(--accent)}
-.fc-list{display:flex;flex-direction:column;gap:6px}
-.fc-row{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 12px;cursor:pointer;transition:border-color .15s}
-.fc-row:hover{border-color:var(--border2)}
-.fc-row-q{flex:1;font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fc-row-cat{font-size:.62rem;font-weight:700;padding:2px 7px;border-radius:99px;flex-shrink:0;color:#fff}
-.fc-row-due{font-size:.62rem;color:#f59e0b;flex-shrink:0;font-weight:600}
-.fc-row-star{cursor:pointer;color:var(--txt3);flex-shrink:0;background:none;border:none;font-size:.9rem;padding:2px}
-.fc-row-star.on{color:#f59e0b}
-.fc-row-acts{display:flex;gap:2px;flex-shrink:0}
-.fc-row-act-btn{background:none;border:none;color:var(--txt3);cursor:pointer;padding:3px 5px;border-radius:5px;font-size:.75rem}
-.fc-row-act-btn:hover{color:var(--txt);background:var(--surf2)}
-.fc-empty{padding:60px 20px;text-align:center;color:var(--txt3)}
-
-.fc-review-hero{max-width:520px;margin:40px auto;text-align:center;display:flex;flex-direction:column;gap:18px}
-.fc-review-icon{font-size:3rem}
-.fc-review-title{font-size:1.3rem;font-weight:800}
-.fc-review-sub{color:var(--txt2);font-size:.88rem}
-.fc-review-cats{display:flex;flex-direction:column;gap:8px;text-align:left}
-.fc-review-cat-row{display:flex;align-items:center;gap:10px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px 14px}
-.fc-review-cat-count{margin-left:auto;font-weight:700;color:var(--accent)}
-.fc-start-btn{background:var(--accent);border:none;color:#fff;padding:12px 24px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit}
-.fc-start-btn:hover{background:var(--accent-h)}
-
-#fc-study{position:fixed;inset:0;z-index:330;background:var(--bg);display:none;flex-direction:column}
-#fc-study.open{display:flex}
-.fc-study-top{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--border);flex-shrink:0}
-.fc-study-progress{flex:1;font-size:.76rem;color:var(--txt3)}
-.fc-study-close{background:none;border:none;color:var(--txt3);font-size:1.1rem;cursor:pointer;padding:4px 8px}
-.fc-study-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;gap:22px;overflow-y:auto}
-.fc-study-cat{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:99px;color:#fff}
-.fc-study-card{max-width:680px;width:100%;text-align:center;display:flex;flex-direction:column;gap:20px}
-.fc-study-q{font-size:1.7rem;font-weight:700;line-height:1.4}
-.fc-study-divider{width:60px;height:2px;background:var(--border2);margin:0 auto}
-.fc-study-a{font-size:1.25rem;color:var(--txt2);line-height:1.5;white-space:pre-wrap}
-.fc-study-hint{font-size:.76rem;color:var(--txt3)}
-.fc-study-note-link{font-size:.76rem;color:var(--accent);cursor:pointer;text-decoration:underline}
-.fc-reveal-btn{background:var(--accent);border:none;color:#fff;padding:12px 30px;border-radius:10px;font-size:.95rem;font-weight:700;cursor:pointer;font-family:inherit}
-.fc-reveal-btn:hover{background:var(--accent-h)}
-.fc-rate-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
-.fc-rate-btn{border:none;color:#fff;padding:11px 20px;border-radius:10px;font-size:.86rem;font-weight:700;cursor:pointer;font-family:inherit;display:flex;flex-direction:column;gap:2px;align-items:center;min-width:88px}
-.fc-rate-btn small{font-weight:500;opacity:.85;font-size:.65rem}
-.fc-rate-forgot{background:#ef4444}
-.fc-rate-hard{background:#f59e0b}
-.fc-rate-good{background:#22c55e}
-.fc-rate-easy{background:#3b82f6}
-.fc-study-foot{display:flex;align-items:center;justify-content:center;gap:16px;padding:14px 18px;border-top:1px solid var(--border);flex-shrink:0}
-.fc-study-nav-btn{background:none;border:1px solid var(--border);color:var(--txt2);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:.8rem;font-family:inherit}
-.fc-study-nav-btn:hover{border-color:var(--accent);color:var(--txt)}
-.fc-study-icon-btn{background:none;border:none;color:var(--txt3);cursor:pointer;font-size:1rem;padding:6px}
-.fc-study-icon-btn.active{color:#f59e0b}
-.fc-complete{max-width:420px;margin:60px auto;text-align:center;display:flex;flex-direction:column;gap:14px}
-
 </style>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+<!-- React is being introduced incrementally, view by view. Views not yet
+     migrated keep using the legacy inline script below untouched. -->
+<script>window.TFReactReady = new Promise(resolve => { window.__resolveTFReactReady = resolve; });</script>
+<script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@babel/standalone@7/babel.min.js"></script>
+<script type="text/babel" data-presets="react" src="{{ url_for('static', filename='js/react/taskflow.jsx') }}"></script>
 </head>
 <body>
 
@@ -1121,7 +1123,6 @@ body.sidebar-open #main-wrap{margin-right:252px}
     <button class="view-tab-primary active" data-v="tasks"     onclick="goToTasks()">Tasks<span class="rem-badge" id="today-badge" style="display:none;background:#ef4444">0</span></button>
     <button class="view-tab-primary"        data-v="workflows"  onclick="switchView('workflows')">⚡ Workflows</button>
     <button class="view-tab-primary"        data-v="notes"      onclick="switchView('notes')">📓 Notes</button>
-    <button class="view-tab-primary"        data-v="flashcards" onclick="switchView('flashcards')">🧠 Flashcards</button>
     <span class="nav-divider"></span>
     <button class="view-tab active" data-v="list"      onclick="switchView('list')">≡ List</button>
     <button class="view-tab"        data-v="kanban"    onclick="switchView('kanban')">⊞ Board</button>
@@ -1149,7 +1150,6 @@ body.sidebar-open #main-wrap{margin-right:252px}
       <button class="more-item" onclick="openMeetingModal(null);closeMoreMenu()"><span class="more-item-icon">📅</span>Add meeting</button>
       <div class="more-sep"></div>
       <button class="more-item" onclick="exportTasks();closeMoreMenu()"><span class="more-item-icon">⬇</span>Export CSV</button>
-      <button class="more-item" onclick="openAiSettingsModal();closeMoreMenu()"><span class="more-item-icon">🤖</span>AI Settings</button>
       <button class="more-item" onclick="openShortcutModal();closeMoreMenu()"><span class="more-item-icon">⌨</span>Keyboard shortcuts</button>
       <button class="more-item" id="theme-btn" onclick="toggleTheme();closeMoreMenu()"><span class="more-item-icon">☀</span><span id="theme-lbl">Light mode</span></button>
     </div>
@@ -1239,67 +1239,8 @@ body.sidebar-open #main-wrap{margin-right:252px}
   <div id="view-reminders" style="display:none" class="view-pad"></div>
   <div id="view-workflows"  style="display:none" class="view-pad"></div>
   <div id="view-notes"      style="display:none"></div>
-  <div id="view-flashcards" style="display:none"></div>
 
 </div><!-- /main-wrap -->
-
-<!-- ── Flashcard study viewer (full-screen) ──────────────────────────────────── -->
-<div id="fc-study">
-  <div class="fc-study-top">
-    <button class="fc-study-close" onclick="fcCloseStudy()">← Back</button>
-    <div class="fc-study-progress" id="fc-study-progress"></div>
-    <button class="fc-study-icon-btn" id="fc-fav-btn" onclick="fcToggleFavoriteCurrent()" title="Favorite (F)">☆</button>
-    <button class="fc-study-icon-btn" onclick="fcEditCurrent()" title="Edit">✏</button>
-    <button class="fc-study-icon-btn" onclick="fcDeleteCurrent()" title="Delete">🗑</button>
-  </div>
-  <div class="fc-study-body" id="fc-study-body"></div>
-  <div class="fc-study-foot" id="fc-study-foot"></div>
-</div>
-
-<!-- ── Flashcard edit/create modal ───────────────────────────────────────────── -->
-<div id="fc-edit-overlay" onclick="if(event.target===this)fcCloseEditModal()">
-  <div class="meeting-modal">
-    <div class="mtg-modal-head">
-      <div class="mtg-modal-title">🧠 <span id="fc-modal-title-txt">New Flashcard</span></div>
-    </div>
-    <div class="mtg-modal-body">
-      <input type="hidden" id="fc-edit-id"/>
-      <label>Question *</label>
-      <textarea id="fc-edit-q" class="m-input" rows="2" placeholder="What is…?"></textarea>
-      <label>Answer *</label>
-      <textarea id="fc-edit-a" class="m-input" rows="3" placeholder="The answer…"></textarea>
-      <label>Category</label>
-      <select id="fc-edit-cat" class="m-input"><option value="">— Uncategorized —</option></select>
-    </div>
-    <div class="mtg-modal-foot">
-      <button class="btn-danger" id="fc-edit-del-btn" onclick="fcDeleteFromModal()" style="display:none">Delete</button>
-      <button class="btn-cancel" onclick="fcCloseEditModal()">Cancel</button>
-      <button class="btn-save"   onclick="fcSaveFromModal()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── AI Settings modal ──────────────────────────────────────────────────────── -->
-<div id="ai-settings-overlay" onclick="if(event.target===this)closeAiSettingsModal()">
-  <div class="meeting-modal">
-    <div class="mtg-modal-head">
-      <div class="mtg-modal-title">🤖 AI Settings</div>
-    </div>
-    <div class="mtg-modal-body">
-      <label>Ollama URL</label>
-      <input type="text" id="ai-url-inp" class="m-input" placeholder="http://localhost:11434"/>
-      <label>Model</label>
-      <select id="ai-model-select" class="m-input" style="display:none"></select>
-      <input type="text" id="ai-model-inp" class="m-input" placeholder="qwen3:8b"/>
-      <button class="hdr-btn" style="margin-top:12px;width:100%" onclick="aiTestConnection()" id="ai-test-btn">🔌 Test Connection</button>
-      <div id="ai-status-box" style="margin-top:10px"></div>
-    </div>
-    <div class="mtg-modal-foot">
-      <button class="btn-cancel" onclick="closeAiSettingsModal()">Close</button>
-      <button class="btn-save"   onclick="aiSaveSettings()">Save</button>
-    </div>
-  </div>
-</div>
 
 <!-- ── Bulk bar ────────────────────────────────────────────────────────────── -->
 <div id="bulk-bar">
@@ -1743,7 +1684,6 @@ const TC = {
 
 // ── State ─────────────────────────────────────────────────────────────────────
 let allTasks=[], allTags=[], allMeetings=[];
-let allFcCategories=[], allFlashcards=[];
 let currentFilter='all', currentSort='newest', searchQuery='';
 let activeTagIds=new Set(), currentView='list';
 let currentTypeFilter='all';
@@ -1754,8 +1694,6 @@ let activeMenuId=null;
 let panelTaskId=null, panelTab='details';
 let timerInterval=null, timerBase=0, timerBaseTime=null;
 let calYear, calMonth;
-let doneOpen=false;
-let wfDoneOpen=false;
 let taskSubView=localStorage.getItem('task_sub_view')||'list';
 let sidebarOpen=localStorage.getItem('daily_sidebar')!=='false';
 // ── Task tracker state ────────────────────────────────────────────────────────
@@ -1765,12 +1703,20 @@ let tpCollapsedSteps=new Set();
 // ── Boot ──────────────────────────────────────────────────────────────────────
 (async()=>{
   applyTheme(localStorage.getItem('theme')||'dark');
+  if(typeof mermaid!=='undefined'){
+    mermaid.initialize({startOnLoad:false, theme:document.documentElement.getAttribute('data-theme')==='light'?'default':'dark'});
+  }
   const v=localStorage.getItem('view')||'list';
   const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth();
-  await Promise.all([loadAll(), loadNotesFromBackend(), loadFlashcards(), loadAiSettings()]); // loadAll also calls loadStandaloneReminders
+  await Promise.all([loadAll(), loadNotesFromBackend(), window.TFReactReady]); // loadAll also calls loadStandaloneReminders
   switchView(v,false);
   const savedTaskPageId=parseInt(localStorage.getItem('task_page_id'));
   if(savedTaskPageId&&allTasks.some(t=>t.id===savedTaskPageId)) await openTaskPage(savedTaskPageId);
+  const savedNotePageId=parseInt(localStorage.getItem('note_page_id'));
+  if(savedNotePageId){
+    const found=findPage(savedNotePageId);
+    if(found) nbOpenPage(found.book.id,found.chapter.id,found.page.id);
+  }
   const dsbBtn=document.getElementById('dsb-toggle-btn');
   if(dsbBtn) dsbBtn.classList.toggle('active',sidebarOpen);
   requestNotifPerm(); startReminderPoll();
@@ -1873,7 +1819,7 @@ function switchView(v,save=true){
   document.body.classList.toggle('sidebar-open',showDsb);
   if(showDsb) renderDailySidebar();
   // View containers
-  ['today','next7','list','kanban','calendar','reminders','workflows','notes','flashcards'].forEach(n=>{
+  ['today','next7','list','kanban','calendar','reminders','workflows','notes'].forEach(n=>{
     const el=document.getElementById('view-'+n);
     if(el) el.style.display=n===v?'':'none';
   });
@@ -1898,7 +1844,6 @@ function switchView(v,save=true){
   if(v==='reminders')  renderReminders();
   if(v==='workflows')  renderWorkflows();
   if(v==='notes')      renderNotes();
-  if(v==='flashcards') renderFlashcards();
   updateProgressStrip();
 }
 
@@ -1982,51 +1927,9 @@ function renderDailySidebar(){
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
 function renderDashboard(){
-  const standalone=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id);
-  const counts=Object.fromEntries(Object.keys(SL).map(s=>[s,0]));
-  standalone.forEach(t=>{if(counts[t.status]!==undefined)counts[t.status]++;});
-  const total=standalone.length, done=counts.completed, pct=total?Math.round(done/total*100):0;
-  const today=todayStr();
-  const overdue=standalone.filter(t=>t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status)).length;
-  const statCards=Object.entries(SL).map(([s,l])=>`
-    <div class="stat-card sc-${s} ${currentFilter===s?'af':''}" onclick="setFilterCard('${s}')">
-      <div class="stat-count">${counts[s]}</div><div class="stat-label">${l}</div>
-    </div>`).join('');
-  const hi=standalone.filter(t=>t.priority==='high'&&!['completed','cancelled'].includes(t.status));
-  const byP=arr=>[...arr].sort((a,b)=>PO[b.priority]-PO[a.priority]);
-  const todoT=byP(standalone.filter(t=>t.status==='todo'));
-  const inPT =byP(standalone.filter(t=>t.status==='in_process'));
-  function miniList(tasks){
-    if(!tasks.length) return '<div class="dash-empty">No tasks</div>';
-    return tasks.slice(0,5).map(t=>{
-      const dc=!t.due_date||['completed','cancelled'].includes(t.status)?'':t.due_date<today?'due-o':t.due_date===today?'due-t':'due-n';
-      const dl=!t.due_date||['completed','cancelled'].includes(t.status)?'':t.due_date<today?'⚠ Overdue':t.due_date===today?'Today':fmtDue(t.due_date);
-      return `<div class="dash-task" onclick="openPanel(${t.id})">
-        <span class="pdot p-${t.priority}" style="width:6px;height:6px;margin-top:0;flex-shrink:0"></span>
-        <span class="dt-title">${esc(t.title)}</span>
-        ${dl?`<span class="due-chip ${dc}" style="font-size:.6rem">${dl}</span>`:''}
-        <span class="sb sb-${t.status}" style="font-size:.6rem;padding:2px 5px" onclick="event.stopPropagation();showStatusMenu(event,${t.id})"><span class="sdot"></span>${SL[t.status]}</span>
-      </div>`;
-    }).join('')+(tasks.length>5?`<div class="dash-empty">+${tasks.length-5} more</div>`:'');
-  }
-  document.getElementById('dashboard').innerHTML=`
-    <div class="stat-grid">${statCards}</div>
-    <div class="progress-row">
-      <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
-      <span class="progress-label">${done}/${total} complete · ${pct}%</span>
-      ${overdue?`<span class="overdue-pill">⚠ ${overdue} overdue</span>`:''}
-    </div>
-    ${hi.length?`<div class="hprio-section"><div class="hprio-hdr">🔴 High Priority (${hi.length})</div><div class="hprio-list">${hi.map(t=>`<div class="hprio-chip" onclick="openPanel(${t.id})"><span>${esc(t.title)}</span></div>`).join('')}</div></div>`:''}
-    <div class="dash-panels">
-      <div class="dash-panel">
-        <div class="panel-hdr"><span style="color:#3b82f6;font-size:.65rem">●</span><span class="panel-ttl">To Do</span><span class="panel-cnt">${todoT.length}</span></div>
-        ${miniList(todoT)}
-      </div>
-      <div class="dash-panel">
-        <div class="panel-hdr"><span style="color:#22c55e;font-size:.65rem">●</span><span class="panel-ttl">In Process</span><span class="panel-cnt">${inPT.length}</span></div>
-        ${miniList(inPT)}
-      </div>
-    </div>`;
+  // Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderDashboard).
+  // This wrapper is kept so every existing call site (renderAll, setFilter, etc.) is unchanged.
+  window.TFReact.renderDashboard();
 }
 
 // ── Counts & tag bar ──────────────────────────────────────────────────────────
@@ -2221,222 +2124,46 @@ function dueBadge(t,today){
 }
 
 // ── List view ─────────────────────────────────────────────────────────────────
+// Card/group/done-section rendering moved to React — see static/js/react/taskflow.jsx
+// (TFReact.renderList). This wrapper keeps the compact-list class toggle (a plain
+// container attribute React's root doesn't own) and every existing call site working.
 function renderList(){
   renderListToolbar();
   const el=document.getElementById('view-list');
   el.classList.toggle('compact-list',compactMode);
-  const tasks=getVisible(), today=todayStr();
-  const active=tasks.filter(t=>!['completed','cancelled'].includes(t.status));
-  const done  =tasks.filter(t=> ['completed','cancelled'].includes(t.status));
-  if(!tasks.length){el.innerHTML='<div class="empty-state">No tasks found.</div>';return;}
-  let activeHtml;
-  if(groupByProject){
-    const groups=new Map();
-    active.forEach(t=>{const k=t.project||'';if(!groups.has(k))groups.set(k,[]);groups.get(k).push(t);});
-    // Sort: named projects first, then empty
-    const sorted=[...[...groups.keys()].filter(k=>k).sort(),...([...groups.keys()].filter(k=>!k))];
-    activeHtml=sorted.map(k=>{
-      const gTasks=groups.get(k);
-      const label=k||'No Project';
-      return `<div class="proj-group">
-        <div class="proj-group-hdr" onclick="toggleProjGroup(this)">
-          <span class="proj-group-chevron open">▶</span>
-          <span class="proj-group-label">📁 ${esc(label)}</span>
-          <span class="proj-group-cnt">${gTasks.length}</span>
-        </div>
-        <div class="proj-group-body">${gTasks.map(t=>cardHtml(t,today)).join('')}</div>
-      </div>`;
-    }).join('');
-  }else{
-    activeHtml=`<div style="display:flex;flex-direction:column;gap:6px">${active.map(t=>cardHtml(t,today)).join('')}</div>`;
-  }
-  const doneSection=done.length?`
-    <div class="done-section-hdr" onclick="toggleDoneSection()">
-      <span class="done-chevron ${doneOpen?'open':''}">▶</span>
-      <span>Completed & Cancelled (${done.length})</span>
-    </div>
-    <div class="done-list ${doneOpen?'':'collapsed'}" id="done-list-inner">
-      <div style="display:flex;flex-direction:column;gap:6px">${done.map(t=>cardHtml(t,today)).join('')}</div>
-    </div>`:'' ;
-  el.innerHTML=activeHtml+doneSection;
+  window.TFReact.renderList();
 }
 function toggleGrouping(){
   groupByProject=!groupByProject;
   document.getElementById('group-btn').classList.toggle('grp-on',groupByProject);
   renderList();
 }
-function toggleProjGroup(hdr){
-  const body=hdr.nextElementSibling;
-  const chevron=hdr.querySelector('.proj-group-chevron');
-  const isOpen=chevron.classList.contains('open');
-  chevron.classList.toggle('open',!isOpen);
-  body.classList.toggle('collapsed',isOpen);
-}
-function toggleDoneSection(){
-  doneOpen=!doneOpen;
-  document.querySelector('.done-chevron')?.classList.toggle('open',doneOpen);
-  document.getElementById('done-list-inner')?.classList.toggle('collapsed',!doneOpen);
-}
-
-// ── Meeting card HTML ─────────────────────────────────────────────────────────
-function meetingCardHtml(m){
-  const isDone=['completed','cancelled'].includes(m.status);
-  const timeStr=m.time?`🕐 ${fmtTime12(m.time)}`:'';
-  const durStr=m.duration_minutes?`⏱ ${fmtMin(m.duration_minutes)}`:'';
-  const recurLbl={daily:'Daily',weekdays:'Weekdays',weekly:'Weekly',biweekly:'2-week',monthly:'Monthly'};
-  const recurHtml=m.recurrence&&m.recurrence!=='none'?`<span class="est-badge" style="color:#a78bfa">↻ ${recurLbl[m.recurrence]||m.recurrence}</span>`:'';
-  const virtualBadge=m._virtual?`<span class="est-badge" style="color:#f59e0b;border:1px solid #f59e0b33">projected</span>`:'';
-
-  const ptPreview=(m.point_preview||[]).map(p=>`<span class="sub-preview-item"><span class="sub-preview-box"></span><span class="sub-preview-text">${esc(p)}</span></span>`).join('');
-  return `
-    <div class="task-card meeting-card ${isDone?'':''}prio-medium" id="mtgcard-${m.id}" onclick="openMeetingModal(${m.id})">
-      <div class="check-col" onclick="event.stopPropagation()">
-        <div class="mtg-icon">${isDone?'✓':'📅'}</div>
-      </div>
-      <div class="task-body">
-        <div style="display:flex;align-items:center;gap:6px">
-          <span class="task-title ${isDone?'done-t':''}">${esc(m.title)}</span>
-          <span class="mtg-type-pill">Meeting</span>
-        </div>
-        <div class="task-foot">
-          ${timeStr?`<span class="est-badge">${timeStr}</span>`:''}
-          ${durStr?`<span class="est-badge">${durStr}</span>`:''}
-          ${m.location?`<span class="est-badge">📍 ${esc(m.location)}</span>`:''}
-          ${recurHtml}
-          ${virtualBadge}
-        </div>
-        ${ptPreview?`<div class="sub-preview">${ptPreview}</div>`:''}
-      </div>
-      <div class="task-right" onclick="event.stopPropagation()">
-        <span class="sb sb-mtg-${m._virtual?'upcoming':m.status}">${m._virtual?'upcoming':m.status}</span>
-        ${m.point_total?`<span class="est-badge">📋 ${m.point_done}/${m.point_total}</span>`:''}
-        <div class="task-actions">
-          <button class="act-btn del" onclick="deleteMeeting(${m.id})">✕</button>
-        </div>
-      </div>
-    </div>`;
-}
 
 // ── Today view ────────────────────────────────────────────────────────────────
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderToday).
 function renderToday(){
   const el=document.getElementById('view-today');
   if(!el)return;
-  const today=todayStr();
-  const overdue =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.due_date<today &&!['completed','cancelled'].includes(t.status));
-  const todayT  =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date===today            &&!['completed','cancelled'].includes(t.status));
-  const inProc  =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.status==='in_process'&&(!t.due_date||t.due_date>today));
-  const realTodayMtg=allMeetings.filter(m=>m.date===today&&!['cancelled'].includes(m.status));
-  const virtualTodayMtg=[];
-  allMeetings.filter(m=>m.recurrence&&m.recurrence!=='none'&&!['cancelled','completed'].includes(m.status)&&m.date!==today).forEach(m=>{
-    if(getOccurrenceDates(m.date,m.recurrence,today,today).includes(today)&&![...realTodayMtg,...virtualTodayMtg].some(r=>r.title===m.title&&r.recurrence===m.recurrence))
-      virtualTodayMtg.push({...m,_virtual:true,date:today});
-  });
-  const todayMtg=[...realTodayMtg,...virtualTodayMtg].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-  const byP=arr=>[...arr].sort((a,b)=>PO[b.priority]-PO[a.priority]);
-
-  function section(cls,label,tasks,isMtg=false){
-    if(!tasks.length)return'';
-    return `<div class="section-hdr ${cls}">
-      <span class="section-hdr-title">${label}</span>
-      <span class="section-hdr-cnt">${tasks.length}</span>
-      <span class="section-hdr-line"></span>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px">${tasks.map(t=>isMtg?meetingCardHtml(t):cardHtml(t,today,true)).join('')}</div>`;
-  }
-  const quickAdd=`<div class="quick-add-row">
-    <input type="text" class="quick-add-inp" id="today-quick-add" placeholder="+ Quick add task for today… (Enter to save)"
-      onkeydown="if(event.key==='Enter')quickAddToday(event)"/>
-  </div>`;
-  const content=section('section-overdue','Overdue',byP(overdue))
-    +section('section-today','Today',byP(todayT))
-    +section('','In Progress',byP(inProc))
-    +section('','Meetings Today',todayMtg,true);
   el.className='view-pad';
-  const todayEmpty='<div class="empty-state" style="margin-bottom:12px">No tasks due today — you\'re all clear! 🎉</div>';
-  el.innerHTML=(content||todayEmpty)+quickAdd;
+  window.TFReact.renderToday();
   setTimeout(restorePomoWidgets,0);
 }
 
 // ── Next 7 Days view ──────────────────────────────────────────────────────────
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderNext7).
 function renderNext7(){
   const el=document.getElementById('view-next7');
   if(!el)return;
-  const today=todayStr();
-  const days=[];
-  for(let i=0;i<7;i++){const d=new Date();d.setDate(d.getDate()+i);days.push(d.toISOString().split('T')[0]);}
-  const overdue=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.due_date<today&&!['completed','cancelled'].includes(t.status));
-  const noDate =allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&!t.due_date&&!['completed','cancelled'].includes(t.status));
-
-  function dayLabel(ds){
-    const d=new Date(ds+'T00:00:00');
-    if(ds===today)return'Today';
-    const tom=new Date();tom.setDate(tom.getDate()+1);
-    if(ds===tom.toISOString().split('T')[0])return'Tomorrow';
-    return d.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
-  }
-
-  function section(label,tasks,cls='',alwaysShow=false){
-    const cards=tasks.map(t=>cardHtml(t,today)).join('');
-    const empty=alwaysShow&&!tasks.length?`<div class="day-empty">No tasks for ${label.toLowerCase()}</div>`:'';
-    if(!tasks.length&&!alwaysShow)return'';
-    return `<div class="section-hdr ${cls}">
-      <span class="section-hdr-title">${label}</span>
-      ${tasks.length?`<span class="section-hdr-cnt">${tasks.length}</span>`:''}
-      <span class="section-hdr-line"></span>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px">${cards||empty}</div>`;
-  }
-
-  let html=section('Overdue',overdue,'section-overdue');
-  days.forEach(ds=>{
-    const realDayTasks=allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date===ds&&!['completed','cancelled'].includes(t.status));
-    const virtualDayTasks=[];
-    allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)&&t.due_date!==ds).forEach(t=>{
-      if(getOccurrenceDates(t.due_date,t.recurrence,ds,ds).includes(ds)&&![...realDayTasks,...virtualDayTasks].some(r=>r.title===t.title&&r.recurrence===t.recurrence))
-        virtualDayTasks.push({...t,_virtual:true,due_date:ds});
-    });
-    html+=section(dayLabel(ds),[...realDayTasks,...virtualDayTasks],ds===today?'section-today':'',true);
-  });
-  html+=section('No Due Date',noDate);
   el.className='view-pad';
-  el.innerHTML=html||'<div class="empty-state">No upcoming tasks in the next 7 days</div>';
+  window.TFReact.renderNext7();
 }
 
 // ── Kanban ────────────────────────────────────────────────────────────────────
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderKanban).
+// kDragStart/kDragEnd/kDragOver/kDragLeave/kDrop below are unchanged and are called
+// directly from the React-rendered column/card drag handlers.
 function renderKanban(){
-  const el=document.getElementById('view-kanban');
-  const today=todayStr();
-  el.innerHTML=`<div class="kanban-board">${Object.entries(SL).map(([s,label])=>{
-    const tasks=[...allTasks.filter(t=>t.status===s&&t.task_type!=='workflow'&&!t.step_id)].sort((a,b)=>PO[b.priority]-PO[a.priority]);
-    return `<div class="kanban-col" ondragover="kDragOver(event)" ondrop="kDrop(event,'${s}')" ondragleave="kDragLeave(event)">
-      <div class="kcol-hdr">
-        <span class="sdot" style="background:${SC[s]};width:8px;height:8px;border-radius:50%;flex-shrink:0"></span>
-        <span class="kcol-ttl">${label}</span><span class="kcol-cnt">${tasks.length}</span>
-      </div>
-      <div class="kcol-body">${tasks.map(t=>kCardHtml(t,today)).join('')}</div>
-    </div>`;
-  }).join('')}</div>`;
-}
-function kCardHtml(t,today){
-  const due=t.due_date&&!['completed','cancelled'].includes(t.status)
-    ?`<span class="due-chip ${t.due_date<today?'due-o':t.due_date===today?'due-t':'due-n'}" style="font-size:.6rem">${t.due_date<today?'⚠':t.due_date===today?'Today':fmtDue(t.due_date)}</span>`:'';
-  const tags=(t.tags||[]).map(tg=>`<span class="tag-chip" style="background:${tg.color};font-size:.6rem;padding:2px 5px">${esc(tg.name)}</span>`).join('');
-  const sub=t.subtask_total?`<span class="kcard-sub">☑ ${t.subtask_done}/${t.subtask_total}</span>`:'';
-  const est=t.estimated_minutes?`<span class="kcard-sub">⏳${fmtMin(t.estimated_minutes)}</span>`:'';
-  const recur=t.recurrence&&t.recurrence!=='none'?`<span class="kcard-sub" style="color:#a78bfa">↻</span>`:'';
-  const blocked=t.is_blocked&&!['completed','cancelled'].includes(t.status)?`<span class="kcard-sub" style="color:#f59e0b" title="Blocked">🔒</span>`:'';
-  const ms=t.step?`<span class="kcard-sub" style="color:#c084fc" title="${esc(t.step.workflow_title)}">📍 ${esc(t.step.title)}</span>`:'';
-  return `<div class="kcard kprio-${t.priority}" draggable="true" data-id="${t.id}"
-    onclick="openPanel(${t.id})"
-    ondragstart="kDragStart(event,${t.id})" ondragend="kDragEnd(event)">
-    <div style="display:flex;gap:6px;align-items:flex-start">
-      <span class="pdot p-${t.priority}" style="margin-top:3px;flex-shrink:0"></span>
-      <span class="kcard-title">${esc(t.title)}</span>
-      ${recur}${blocked}
-    </div>
-    ${tags?`<div class="kcard-tags">${tags}</div>`:''}
-    <div class="kcard-meta">${due}${sub}${est}${ms}</div>
-  </div>`;
+  window.TFReact.renderKanban();
 }
 let dragId=null;
 function kDragStart(e,id){dragId=id;e.currentTarget.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
@@ -2471,59 +2198,11 @@ function getOccurrenceDates(startStr,rec,fromStr,toStr){
   return res;
 }
 
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderCalendar).
+// The day-popup modal (openCalDay/#calday-overlay) is unchanged legacy code, still
+// invoked directly from the React-rendered day cells.
 function renderCalendar(){
-  const el=document.getElementById('view-calendar'),today=todayStr();
-  const first=new Date(calYear,calMonth,1),last=new Date(calYear,calMonth+1,0);
-  const startDow=(first.getDay()+6)%7,daysInMonth=last.getDate();
-  const taskMap={},mtgMap={};
-  allTasks.filter(t=>t.due_date&&t.task_type!=='workflow'&&!t.step_id).forEach(t=>{if(!taskMap[t.due_date])taskMap[t.due_date]=[];taskMap[t.due_date].push(t);});
-  allMeetings.forEach(m=>{if(!mtgMap[m.date])mtgMap[m.date]=[];mtgMap[m.date].push(m);});
-  const monthStart=`${calYear}-${String(calMonth+1).padStart(2,'0')}-01`;
-  const monthEnd=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(last.getDate()).padStart(2,'0')}`;
-  // Virtual future occurrences for recurring tasks (active only)
-  allTasks.filter(t=>t.task_type!=='workflow'&&!t.step_id&&t.due_date&&t.recurrence&&t.recurrence!=='none'&&!['completed','cancelled'].includes(t.status)).forEach(t=>{
-    getOccurrenceDates(t.due_date,t.recurrence,monthStart,monthEnd).forEach(ds=>{
-      if(ds===t.due_date)return;
-      if(!(taskMap[ds]||[]).some(r=>r.title===t.title&&r.recurrence===t.recurrence)){
-        if(!taskMap[ds])taskMap[ds]=[];taskMap[ds].push({...t,_virtual:true,due_date:ds});
-      }
-    });
-  });
-  // Virtual future occurrences for recurring meetings (active only, not completed/cancelled)
-  allMeetings.filter(m=>m.recurrence&&m.recurrence!=='none'&&!['cancelled','completed'].includes(m.status)).forEach(m=>{
-    getOccurrenceDates(m.date,m.recurrence,monthStart,monthEnd).forEach(ds=>{
-      if(ds===m.date)return;
-      if(!(mtgMap[ds]||[]).some(r=>r.title===m.title&&r.recurrence===m.recurrence)){
-        if(!mtgMap[ds])mtgMap[ds]=[];mtgMap[ds].push({...m,_virtual:true,date:ds});
-      }
-    });
-  });
-  const monthName=first.toLocaleDateString(undefined,{month:'long',year:'numeric'});
-  const total=Math.ceil((startDow+daysInMonth)/7)*7;
-  let cells='';
-  for(let i=0;i<total;i++){
-    const dn=i-startDow+1;
-    if(dn<1||dn>daysInMonth){cells+=`<div class="cal-day other-m"><div class="cal-day-num">${dn<1?'':dn}</div></div>`;continue;}
-    const ds=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(dn).padStart(2,'0')}`;
-    const isT=ds===today;
-    const dt=taskMap[ds]||[],dm=mtgMap[ds]||[];
-    const chips=dt.slice(0,2).map(t=>`<span class="cal-task-chip" style="background:${SC[t.status]};${t._virtual?'opacity:.6;outline:1px dashed rgba(255,255,255,.4)':''}" onclick="event.stopPropagation();openCalDay('${ds}')">${t._virtual?'↻ ':''}${esc(t.title)}</span>`).join('');
-    const mtgDots=dm.length?`<span class="cal-mtg-dot" title="${dm.length} meeting${dm.length>1?'s':''}"></span>`.repeat(Math.min(dm.length,3)):'';
-    const more=(dt.length>2||dm.length)?`<div class="cal-more">${dt.length>2?`+${dt.length-2} tasks`:''} ${dm.length?`📅${dm.length}`:''}</div>`:'';
-    cells+=`<div class="cal-day ${isT?'today-cell':''}" onclick="openCalDay('${ds}')">
-      <div class="cal-day-num">${dn}${mtgDots}</div>${chips}${more}
-    </div>`;
-  }
-  el.innerHTML=`<div class="cal-header">
-    <button class="cal-nav" onclick="calNav(-1)">‹</button>
-    <span class="cal-month-lbl">${monthName}</span>
-    <button class="cal-nav" onclick="calNav(1)">›</button>
-    <button class="cal-nav" style="width:auto;padding:0 9px;font-size:.75rem" onclick="calToday()">Today</button>
-  </div>
-  <div class="cal-grid">
-    ${['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d=>`<div class="cal-dow">${d}</div>`).join('')}
-    ${cells}
-  </div>`;
+  window.TFReact.renderCalendar();
 }
 function calNav(d){calMonth+=d;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
 function calToday(){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();renderCalendar();}
@@ -3096,59 +2775,9 @@ async function loadStandaloneReminders(){
   try{const r=await fetch('/standalone-reminders');allStandaloneReminders=await r.json();}catch(_){}
 }
 
-const REM_TYPE_ICONS={meeting:'📅',call:'📞',task:'✅',deadline:'⏰',personal:'🏠',general:'🔔'};
-
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderReminders).
 function renderReminders(){
-  const el=document.getElementById('view-reminders');
-  if(!el)return;
-  const nowIso=()=>new Date().toISOString().replace('T',' ').substring(0,19);
-  const today=todayStr();
-  const taskRems=allTasks
-    .filter(t=>t.reminder&&!['completed','cancelled'].includes(t.status))
-    .map(t=>({...t.reminder,title:t.title,type:'task',task_id:t.id}));
-  const standaloneRems=allStandaloneReminders.map(r=>({...r,type:'standalone'}));
-  const all=[...taskRems,...standaloneRems].sort((a,b)=>a.remind_at.localeCompare(b.remind_at));
-  const now=nowIso();
-  const overdue=all.filter(r=>r.remind_at<now);
-  const upcoming=all.filter(r=>r.remind_at>=now);
-
-  const remCard=r=>{
-    const now2=nowIso();
-    const isOver=r.remind_at<now2, isToday=r.remind_at.substring(0,10)===today;
-    const cls=isOver?'rc-overdue':isToday?'rc-today':'rc-upcoming';
-    const timeCls=isOver?'overdue':isToday?'today':'upcoming';
-    const icon=r.type==='standalone'?(REM_TYPE_ICONS[r.reminder_type]||'🔔'):'📋';
-    const taskLink=r.type==='task'?`<span class="rem-task-link">📋 task</span>`:'';
-    const recur=r.recurrence&&r.recurrence!=='none'?`<span class="rem-recur-badge">↻ ${capFirst(r.recurrence)}</span>`:'';
-    const editFn=r.type==='standalone'?`openStandaloneRemModal(${r.id})`:`openPanel(${r.task_id})`;
-    const delFn=r.type==='standalone'
-      ?`deleteStandaloneReminderById(${r.id})`
-      :`removeTaskReminderById(${r.task_id})`;
-    return `<div class="rem-card ${cls}">
-      <span class="rem-card-icon">${icon}</span>
-      <div class="rem-card-body">
-        <div class="rem-card-title">${esc(r.title)}</div>
-        ${r.note?`<div class="rem-card-note">${esc(r.note)}</div>`:''}
-        <div class="rem-card-meta">
-          <span class="rem-time-badge ${timeCls}">${isOver?'⚠ Overdue · ':''}${fmtDateTime(r.remind_at)}</span>
-          ${recur}${taskLink}
-        </div>
-      </div>
-      <div class="rem-card-actions">
-        <button class="rem-edit-btn" onclick="${editFn}">✏</button>
-        <button class="rem-del-btn" onclick="event.stopPropagation();${delFn}">✕</button>
-      </div>
-    </div>`;
-  };
-
-  el.innerHTML=`
-    <div class="rem-view-hdr">
-      <div class="rem-view-title">🔔 All Reminders</div>
-      <button class="hdr-btn primary" onclick="openStandaloneRemModal(null)">+ New Reminder</button>
-    </div>
-    ${overdue.length?`<div class="rem-section-label">⚠ Overdue (${overdue.length})</div>${overdue.map(remCard).join('')}`:''}
-    ${upcoming.length?`<div class="rem-section-label">Upcoming (${upcoming.length})</div>${upcoming.map(remCard).join('')}`:''}
-    ${!all.length?`<div class="rem-empty">No reminders set<br><small>Use "+ New Reminder" to create a meeting, call, or any reminder</small></div>`:''}`;
+  window.TFReact.renderReminders();
 }
 
 function openStandaloneRemModal(id){
@@ -3602,16 +3231,20 @@ function _tpStepCardHtml(s){
   const ptCount=tasks.length?`<span class="tp-pt-count">${tasks.length} task${tasks.length!==1?'s':''}</span>`:'';
   return `<div class="tp-step-card ${isCollapsed?'collapsed':''}" id="tps-${s.id}">
     <div class="tp-step-hdr" onclick="tpToggleCollapse(${s.id})" style="cursor:pointer">
-      <span class="tp-step-chev">${isCollapsed?'▶':'▼'}</span>
-      <span class="tp-step-icon">${sIcon}</span>
-      <span class="tp-step-title">${esc(s.title)}</span>
-      ${ptCount}
-      <select class="tp-step-sel" onchange="tpUpdateStepStatus(${s.id},this.value)" onclick="event.stopPropagation()" style="margin-left:auto">
-        <option value="not_started" ${(s.status||'not_started')==='not_started'?'selected':''}>Not Started</option>
-        <option value="in_progress" ${s.status==='in_progress'?'selected':''}>In Progress</option>
-        <option value="completed"   ${s.status==='completed'?'selected':''}>Done</option>
-      </select>
-      <button class="tp-del-btn" onclick="event.stopPropagation();tpDeleteStep(${s.id})">✕</button>
+      <div class="tp-step-hdr-top">
+        <span class="tp-step-chev">${isCollapsed?'▶':'▼'}</span>
+        <span class="tp-step-icon">${sIcon}</span>
+        <span class="tp-step-title">${esc(s.title)}</span>
+      </div>
+      <div class="tp-step-hdr-meta">
+        ${ptCount}
+        <select class="tp-step-sel" onchange="tpUpdateStepStatus(${s.id},this.value)" onclick="event.stopPropagation()" style="margin-left:auto">
+          <option value="not_started" ${(s.status||'not_started')==='not_started'?'selected':''}>Not Started</option>
+          <option value="in_progress" ${s.status==='in_progress'?'selected':''}>In Progress</option>
+          <option value="completed"   ${s.status==='completed'?'selected':''}>Done</option>
+        </select>
+        <button class="tp-del-btn" onclick="event.stopPropagation();tpDeleteStep(${s.id})">✕</button>
+      </div>
     </div>
     ${progressHtml}
     <div class="step-task-list">${tasksHtml}</div>
@@ -3660,35 +3293,9 @@ async function _tpReload(){
 }
 
 // ── Workflows view ─────────────────────────────────────────────────────────────
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderWorkflows).
 function renderWorkflows(){
-  const el=document.getElementById('view-workflows');
-  if(!el)return;
-  const today=todayStr();
-  const workflows=allTasks.filter(t=>t.task_type==='workflow');
-  const byP=arr=>[...arr].sort((a,b)=>PO[b.priority]-PO[a.priority]);
-  const active=byP(workflows.filter(t=>!['completed','cancelled'].includes(t.status)));
-  const done=workflows.filter(t=>['completed','cancelled'].includes(t.status));
-
-  const quickAdd=`<div class="quick-add-row" style="margin-bottom:16px">
-    <input type="text" class="quick-add-inp" id="wf-quick-add" placeholder="+ New workflow name… (Enter to create)"
-      onkeydown="if(event.key==='Enter')quickAddWorkflow(event)"/>
-    <button class="sub-add-btn" style="flex-shrink:0" onclick="quickAddWorkflow()">Create</button>
-  </div>`;
-
-  const wfHtml=active.length
-    ?`<div style="display:flex;flex-direction:column;gap:6px">${active.map(t=>cardHtml(t,today,false,'openTaskPage')).join('')}</div>`
-    :`<div class="empty-state" style="margin-top:8px">No active workflows — create one above.</div>`;
-
-  const doneSection=done.length?`
-    <div class="done-section-hdr" onclick="toggleWfDoneSection()">
-      <span class="done-chevron ${wfDoneOpen?'open':''}">▶</span>
-      <span>Completed &amp; Cancelled (${done.length})</span>
-    </div>
-    <div class="done-list ${wfDoneOpen?'':'collapsed'}" id="wf-done-list-inner">
-      <div style="display:flex;flex-direction:column;gap:6px">${done.map(t=>cardHtml(t,today,false,'openTaskPage')).join('')}</div>
-    </div>`:'';
-
-  el.innerHTML=quickAdd+wfHtml+doneSection;
+  window.TFReact.renderWorkflows();
 }
 
 async function quickAddWorkflow(e){
@@ -3702,18 +3309,6 @@ async function quickAddWorkflow(e){
   await loadAll();
   openPanel(saved.id);
   showToast('✓ Workflow created');
-}
-
-function toggleWfDoneSection(){
-  wfDoneOpen=!wfDoneOpen;
-  document.querySelector('#view-workflows .done-chevron')?.classList.toggle('open',wfDoneOpen);
-  document.getElementById('wf-done-list-inner')?.classList.toggle('collapsed',!wfDoneOpen);
-}
-
-function toggleWfDoneSection(){
-  wfDoneOpen=!wfDoneOpen;
-  document.querySelector('#view-workflows .done-chevron')?.classList.toggle('open',wfDoneOpen);
-  document.getElementById('wf-done-list-inner')?.classList.toggle('collapsed',!wfDoneOpen);
 }
 
 // ── Flow View ─────────────────────────────────────────────────────────────────
@@ -4036,96 +3631,14 @@ function renderNotes(){
 }
 
 // ── Book tree renderer ────────────────────────────────────────────────────────
+// Rendering moved to React — see static/js/react/taskflow.jsx (TFReact.renderBookTree).
+// The note editor pane (renderNoteEditor, below) stays legacy: its #ne-body is a live
+// contentEditable surface, and re-rendering that through React on every keystroke would
+// fight the browser's own cursor/selection state. Direct DOM patches from the editor's
+// callbacks (e.g. onNoteTitleChange patching '#nbpg-{id} .nb-pg-title' text) still work
+// unchanged against the React-rendered tree nodes below, same as elsewhere in the app.
 function renderBookTree(){
-  const el=document.getElementById('nb-tree');
-  if(!el)return;
-  if(noteSearchQ){renderSearchResults(el);return;}
-  if(!allBooks.length){
-    el.innerHTML=`<div class="nb-empty"><span class="nb-empty-icon">📚</span>No notebooks yet<br>Click <b>+</b> to create your first notebook</div>`;
-    return;
-  }
-  el.innerHTML=allBooks.map(b=>_bookHtml(b)).join('');
-}
-
-function _bookHtml(b){
-  const isOpen=nbOpenBooks.has(b.id);
-  const chCnt=b.chapters.length;
-  const pgCnt=b.chapters.reduce((s,c)=>s+c.pages.length,0);
-  const chapHtml=isOpen?b.chapters.map(c=>_chapterHtml(b,c)).join(''):'';
-  const addForm=isOpen&&nbAddingChapter===b.id?`
-    <div class="nb-inline-form">
-      <input class="nb-inline-inp" id="nb-ch-inp-${b.id}" type="text" placeholder="Chapter name… (Enter)"
-        onkeydown="if(event.key==='Enter')nbSaveChapter(${b.id});if(event.key==='Escape')nbCancelAdd()"/>
-      <button class="nb-inline-btn" onclick="nbSaveChapter(${b.id})">Add</button>
-      <button class="nb-inline-cancel" onclick="nbCancelAdd()">✕</button>
-    </div>`:'';
-  return `<div class="nb-book" id="nbbook-${b.id}">
-    <div class="nb-book-hdr" onclick="nbToggleBook(${b.id})">
-      <span class="nb-book-chev ${isOpen?'open':''}">▶</span>
-      <span class="nb-book-icon">📚</span>
-      <span class="nb-book-title" title="${esc(b.title)}">${esc(b.title)}</span>
-      <span class="nb-book-count">${chCnt}ch · ${pgCnt}p</span>
-      <div class="nb-book-acts" onclick="event.stopPropagation()">
-        <button class="nb-book-act-btn" onclick="nbStartAddChapter(${b.id})" title="Add chapter">+ Ch</button>
-        <button class="nb-book-act-btn" onclick="nbRenameBook(${b.id})" title="Rename">✏</button>
-        <button class="nb-book-act-btn del" onclick="nbDeleteBook(${b.id})" title="Delete notebook">🗑</button>
-      </div>
-    </div>
-    ${isOpen?`<div class="nb-book-body">${chapHtml}${addForm}</div>`:''}
-  </div>`;
-}
-
-function _chapterHtml(b,c){
-  const isOpen=nbOpenChapters.has(c.id);
-  const pgHtml=isOpen?c.pages.map(p=>_pageItemHtml(b,c,p)).join(''):'';
-  const addForm=isOpen&&nbAddingPage===c.id?`
-    <div class="nb-inline-form" style="padding-left:4px">
-      <input class="nb-inline-inp" id="nb-pg-inp-${c.id}" type="text" placeholder="Page title… (Enter)"
-        onkeydown="if(event.key==='Enter')nbSavePage(${b.id},${c.id});if(event.key==='Escape')nbCancelAdd()"/>
-      <button class="nb-inline-btn" onclick="nbSavePage(${b.id},${c.id})">Add</button>
-      <button class="nb-inline-cancel" onclick="nbCancelAdd()">✕</button>
-    </div>`:'';
-  return `<div class="nb-ch" id="nbch-${c.id}">
-    <div class="nb-ch-hdr" onclick="nbToggleChapter(${b.id},${c.id})">
-      <span class="nb-ch-chev ${isOpen?'open':''}">▶</span>
-      <span class="nb-ch-icon">📖</span>
-      <span class="nb-ch-title" title="${esc(c.title)}">${esc(c.title)}</span>
-      <span class="nb-ch-count">${c.pages.length}p</span>
-      <div class="nb-ch-acts" onclick="event.stopPropagation()">
-        <button class="nb-ch-act-btn" onclick="nbStartAddPage(${b.id},${c.id})" title="Add page">+ Pg</button>
-        <button class="nb-ch-act-btn" onclick="nbRenameChapter(${b.id},${c.id})" title="Rename">✏</button>
-        <button class="nb-ch-act-btn del" onclick="nbDeleteChapter(${b.id},${c.id})" title="Delete chapter">🗑</button>
-      </div>
-    </div>
-    ${isOpen?`<div class="nb-ch-body">${pgHtml}${addForm}</div>`:''}
-  </div>`;
-}
-
-function _pageItemHtml(b,c,p){
-  const isActive=p.id===activePageId;
-  return `<div class="nb-pg-item ${isActive?'active':''}" onclick="nbOpenPage(${b.id},${c.id},${p.id})" id="nbpg-${p.id}">
-    <div class="nb-pg-dot"></div>
-    <span class="nb-pg-title" title="${esc(p.title||'Untitled')}">${esc(p.title||'Untitled')}</span>
-    <div class="nb-pg-acts" onclick="event.stopPropagation()">
-      <button class="nb-pg-act-btn" onclick="nbDeletePage(${b.id},${c.id},${p.id})" title="Delete page">🗑</button>
-    </div>
-  </div>`;
-}
-
-function renderSearchResults(el){
-  const q=noteSearchQ.toLowerCase();
-  const hits=allPagesFlat().filter(({book,chapter,page})=>
-    (page.title||'').toLowerCase().includes(q)||noteBodyText(page.body||'').toLowerCase().includes(q));
-  if(!hits.length){
-    el.innerHTML=`<div class="nb-empty"><span class="nb-empty-icon">🔍</span>No pages match "${esc(noteSearchQ)}"</div>`;
-    return;
-  }
-  el.innerHTML=`<div>${hits.map(({book:b,chapter:c,page:p})=>`
-    <div class="nb-sr-item ${p.id===activePageId?'active':''}" onclick="nbOpenPage(${b.id},${c.id},${p.id})">
-      <div class="nb-sr-title">${esc(p.title||'Untitled')}</div>
-      <div class="nb-sr-path">📚 ${esc(b.title)} › 📖 ${esc(c.title)}</div>
-      <div class="nb-sr-preview">${esc(noteBodyText(p.body||'').slice(0,100).trim())}</div>
-    </div>`).join('')}</div>`;
+  window.TFReact.renderBookTree();
 }
 
 // ── Tree interactions ─────────────────────────────────────────────────────────
@@ -4142,6 +3655,7 @@ function nbToggleChapter(bid,cid){
 function nbOpenPage(bid,cid,pid){
   noteReadMode=false;
   activeBookId=bid; activeChapterId=cid; activePageId=pid;
+  localStorage.setItem('note_page_id',pid);
   nbOpenBooks.add(bid); nbOpenChapters.add(cid);
   renderBookTree();
   const found=findPage(pid);
@@ -4290,7 +3804,7 @@ function renderNoteEditor(page,ctx){
   }).join('');
   const wc=noteWordCount(page.body||''),cc=noteCharCount(page.body||'');
   el.innerHTML=`${breadcrumb}
-    <div class="ne-topbar">
+    <div class="ne-topbar" style="border-top:3px solid ${NOTE_COLORS[page.color||'default']||NOTE_COLORS.default}">
       <div class="ne-colors">${dots}</div>
       <button class="ne-icon-btn" onclick="duplicatePage(${page.id})" title="Duplicate page">⧉</button>
       <button class="ne-icon-btn" onclick="exportPage(${page.id})" title="Export as .txt">⬇</button>
@@ -4362,6 +3876,14 @@ async function setPageColor(color){
   document.querySelectorAll('.ne-cdot').forEach(d=>d.classList.remove('nc-sel'));
   const dc=NOTE_COLORS[color]||'#888';
   document.querySelector(`.ne-cdot[style*="${dc}"]`)?.classList.add('nc-sel');
+  const topbar=document.querySelector('.ne-topbar');
+  if(topbar) topbar.style.borderTop=`3px solid ${dc}`;
+  const row=document.getElementById(`nbpg-${found.page.id}`);
+  if(row){
+    row.dataset.color=color;
+    const dot=row.querySelector('.nb-pg-dot');
+    if(dot) dot.style.background=dc;
+  }
 }
 async function duplicatePage(pid){
   const found=findPage(pid);if(!found)return;
@@ -4398,10 +3920,53 @@ function toggleNoteReadMode(){
   if(titleEl) titleEl.readOnly=noteReadMode;
   const btn=document.querySelector('.ne-read-btn');
   if(btn){btn.innerHTML=noteReadMode?'✏ Edit':'📖 Read';btn.classList.toggle('is-read',noteReadMode);}
-  if(!noteReadMode){
+  if(noteReadMode){
+    renderNoteDiagrams();
+  }else{
+    revertNoteDiagrams();
     const b=document.getElementById('ne-body');
     if(b){b.focus();placeCaretAtEnd(b);}
   }
+}
+
+// Diagrams are rendered only while in Read Mode (contenteditable=false), and always
+// reverted back to their source shape before returning to edit mode -- the live
+// #ne-body node (what gets saved) must never contain a rendered SVG, only the
+// <pre class="nx-mermaid-source"> + placeholder that the Copilot/user actually wrote.
+async function renderNoteDiagrams(){
+  if(typeof mermaid==='undefined')return;
+  const body=document.getElementById('ne-body');
+  if(!body)return;
+  const boxes=[...body.querySelectorAll('.nx-diagram-box:not(.is-rendered)')];
+  for(const box of boxes){
+    const srcEl=box.querySelector('.nx-mermaid-source');
+    const placeholder=box.querySelector('.nx-diagram-placeholder');
+    if(!srcEl)continue;
+    const src=(srcEl.textContent||'').trim();
+    if(!src)continue;
+    try{
+      const id='nxmermaid-'+Math.random().toString(36).slice(2);
+      const {svg}=await mermaid.render(id,src);
+      const rendered=document.createElement('div');
+      rendered.className='nx-mermaid-rendered';
+      rendered.innerHTML=svg;
+      box.appendChild(rendered);
+      if(placeholder) placeholder.style.display='none';
+      box.classList.add('is-rendered');
+    }catch(e){
+      if(placeholder) placeholder.textContent='⚠ Could not render this diagram';
+    }
+  }
+}
+function revertNoteDiagrams(){
+  const body=document.getElementById('ne-body');
+  if(!body)return;
+  body.querySelectorAll('.nx-diagram-box.is-rendered').forEach(box=>{
+    box.querySelector('.nx-mermaid-rendered')?.remove();
+    const placeholder=box.querySelector('.nx-diagram-placeholder');
+    if(placeholder) placeholder.style.display='';
+    box.classList.remove('is-rendered');
+  });
 }
 
 function toggleNoteFocus(){
@@ -4412,401 +3977,6 @@ function toggleNoteFocus(){
 }
 function nbSearch(q){noteSearchQ=q;renderBookTree();}
 
-// ── Flashcards state ────────────────────────────────────────────────────────────
-let fcSubView='review';        // 'review' | 'browse'
-let fcActiveCategoryId=null;   // null='All', 'fav'=Favorites, or a category id
-let fcSearchQ='';
-let fcStudyQueue=[], fcStudyIndex=0, fcRevealed=false, fcStudyMode='browse';
-
-async function loadFlashcards(){
-  const [catR,cardR]=await Promise.all([fetch('/flashcards/categories'),fetch('/flashcards')]);
-  allFcCategories=await catR.json();
-  allFlashcards=await cardR.json();
-}
-
-// ── Flashcards: top-level render ──────────────────────────────────────────────
-function renderFlashcards(){
-  const el=document.getElementById('view-flashcards');
-  if(!el)return;
-  el.innerHTML=`<div class="tp-view-toggle" style="margin:14px 18px">
-      <button class="tp-vtab ${fcSubView==='review'?'active':''}" onclick="fcSwitchSubView('review')">🧠 Review</button>
-      <button class="tp-vtab ${fcSubView==='browse'?'active':''}" onclick="fcSwitchSubView('browse')">📚 Browse</button>
-    </div>
-    <div id="fc-subview-body"></div>`;
-  if(fcSubView==='review') renderFcReview();
-  else renderFcBrowse();
-}
-function fcSwitchSubView(v){ fcSubView=v; renderFlashcards(); }
-
-// ── Flashcards: Daily Review landing ──────────────────────────────────────────
-function renderFcReview(){
-  const el=document.getElementById('fc-subview-body');
-  if(!el)return;
-  const due=allFlashcards.filter(c=>c.is_due);
-  if(!due.length){
-    el.innerHTML=`<div class="fc-review-hero">
-      <div class="fc-review-icon">🎉</div>
-      <div class="fc-review-title">All caught up!</div>
-      <div class="fc-review-sub">No cards due for review right now. Check back later, or browse your full collection.</div>
-      <button class="fc-start-btn" onclick="fcSwitchSubView('browse')">📚 Browse Flashcards</button>
-    </div>`;
-    return;
-  }
-  const groups=new Map();
-  for(const c of due){
-    const key=c.category?c.category.id:'none';
-    if(!groups.has(key)) groups.set(key,{category:c.category,cards:[]});
-    groups.get(key).cards.push(c);
-  }
-  const rows=[...groups.values()].map(g=>`
-    <div class="fc-review-cat-row">
-      <span class="fc-cat-dot" style="background:${g.category?g.category.color:'var(--txt3)'}"></span>
-      <span>${g.category?esc(g.category.name):'Uncategorized'}</span>
-      <span class="fc-review-cat-count">${g.cards.length}</span>
-    </div>`).join('');
-  el.innerHTML=`<div class="fc-review-hero">
-    <div class="fc-review-icon">🧠</div>
-    <div class="fc-review-title">Today's Revision</div>
-    <div class="fc-review-sub">${due.length} card${due.length!==1?'s':''} ready for review</div>
-    <div class="fc-review-cats">${rows}</div>
-    <button class="fc-start-btn" onclick="fcStartDailyReview()">▶ Start Review</button>
-  </div>`;
-}
-function fcStartDailyReview(){
-  const due=allFlashcards.filter(c=>c.is_due);
-  fcStartStudy(due,'review');
-}
-
-// ── Flashcards: Browse ────────────────────────────────────────────────────────
-function fcFilteredCards(){
-  let filtered=allFlashcards;
-  if(fcActiveCategoryId==='fav') filtered=filtered.filter(c=>c.is_favorite);
-  else if(fcActiveCategoryId) filtered=filtered.filter(c=>c.category_id===fcActiveCategoryId);
-  if(fcSearchQ){
-    const q=fcSearchQ.toLowerCase();
-    filtered=filtered.filter(c=>c.question.toLowerCase().includes(q)||c.answer.toLowerCase().includes(q));
-  }
-  return filtered;
-}
-
-function renderFcBrowse(){
-  const el=document.getElementById('fc-subview-body');
-  if(!el)return;
-  const allActive=fcActiveCategoryId===null, favActive=fcActiveCategoryId==='fav';
-  const catRows=allFcCategories.map(c=>{
-    const active=fcActiveCategoryId===c.id;
-    return `<div class="fc-cat-item ${active?'active':''}" onclick="fcSetCategory(${c.id})">
-      <span class="fc-cat-dot" style="background:${c.color}"></span>
-      <span class="fc-cat-name" title="${esc(c.name)}">${esc(c.name)}</span>
-      <span class="fc-cat-count">${c.card_total}</span>
-      <button class="fc-cat-del" onclick="event.stopPropagation();fcDeleteCategory(${c.id})" title="Delete category">✕</button>
-    </div>`;
-  }).join('');
-  const sidebar=`
-    <div class="fc-cat-item ${allActive?'active':''}" onclick="fcSetCategory(null)">
-      <span class="fc-cat-dot" style="background:var(--txt3)"></span>
-      <span class="fc-cat-name">All Cards</span>
-      <span class="fc-cat-count">${allFlashcards.length}</span>
-    </div>
-    <div class="fc-cat-item ${favActive?'active':''}" onclick="fcSetCategory('fav')">
-      <span class="fc-cat-dot" style="background:#f59e0b"></span>
-      <span class="fc-cat-name">⭐ Favorites</span>
-      <span class="fc-cat-count">${allFlashcards.filter(c=>c.is_favorite).length}</span>
-    </div>
-    ${catRows}
-    <div class="fc-cat-add-row">
-      <input type="text" class="fc-search" id="fc-new-cat-inp" placeholder="+ New category…" style="font-size:.76rem;padding:6px 8px" onkeydown="if(event.key==='Enter')fcCreateCategory()"/>
-    </div>`;
-
-  const filtered=fcFilteredCards();
-  const rows=filtered.length?filtered.map(c=>`
-    <div class="fc-row" onclick="fcOpenBrowseStudy(${c.id})">
-      ${c.category?`<span class="fc-row-cat" style="background:${c.category.color}">${esc(c.category.name)}</span>`:''}
-      <span class="fc-row-q">${esc(c.question)}</span>
-      ${c.is_due?'<span class="fc-row-due">● due</span>':''}
-      <button class="fc-row-star ${c.is_favorite?'on':''}" onclick="event.stopPropagation();fcToggleFavoriteRow(${c.id})">${c.is_favorite?'★':'☆'}</button>
-      <div class="fc-row-acts">
-        <button class="fc-row-act-btn" onclick="event.stopPropagation();fcOpenEditModal(${c.id})" title="Edit">✏</button>
-        <button class="fc-row-act-btn" onclick="event.stopPropagation();fcDeleteRow(${c.id})" title="Delete">🗑</button>
-      </div>
-    </div>`).join('')
-    : `<div class="fc-empty">No flashcards ${fcSearchQ?`match "${esc(fcSearchQ)}"`:'yet'}.<br><button class="fc-start-btn" style="margin-top:10px" onclick="fcOpenEditModal(null)">＋ New Flashcard</button></div>`;
-
-  el.innerHTML=`<div class="fc-layout">
-    <div class="fc-sidebar">${sidebar}</div>
-    <div class="fc-main">
-      <div class="fc-toolbar">
-        <input type="text" class="fc-search" placeholder="Search flashcards…" value="${esc(fcSearchQ)}" oninput="fcSearch(this.value)"/>
-        <button class="hdr-btn primary" onclick="fcOpenEditModal(null)">＋ New Card</button>
-      </div>
-      <div class="fc-list">${rows}</div>
-    </div>
-  </div>`;
-}
-function fcSetCategory(id){ fcActiveCategoryId=id; renderFcBrowse(); }
-function fcSearch(q){ fcSearchQ=q; renderFcBrowse(); }
-
-function fcOpenBrowseStudy(cardId){
-  const filtered=fcFilteredCards();
-  const idx=filtered.findIndex(c=>c.id===cardId);
-  fcStartStudy(filtered,'browse',idx>=0?idx:0);
-}
-
-async function fcToggleFavoriteRow(id){
-  const card=allFlashcards.find(c=>c.id===id); if(!card)return;
-  await fetch(`/flashcards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_favorite:!card.is_favorite})});
-  await loadFlashcards();
-  renderFcBrowse();
-}
-async function fcDeleteRow(id){
-  if(!confirm('Delete this flashcard?'))return;
-  await fetch(`/flashcards/${id}`,{method:'DELETE'});
-  await loadFlashcards();
-  renderFcBrowse();
-}
-
-async function fcCreateCategory(){
-  const inp=document.getElementById('fc-new-cat-inp');
-  const name=(inp?.value||'').trim(); if(!name)return;
-  const palette=['#3b82f6','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#14b8a6','#f97316'];
-  const color=palette[allFcCategories.length%palette.length];
-  await fetch('/flashcards/categories',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,color})});
-  await loadFlashcards();
-  renderFcBrowse();
-  showToast('📚 Category created');
-}
-async function fcDeleteCategory(id){
-  const cat=allFcCategories.find(c=>c.id===id); if(!cat)return;
-  if(!confirm(`Delete category "${cat.name}"? Cards stay, just become uncategorized.`))return;
-  await fetch(`/flashcards/categories/${id}`,{method:'DELETE'});
-  if(fcActiveCategoryId===id) fcActiveCategoryId=null;
-  await loadFlashcards();
-  renderFcBrowse();
-}
-
-// ── Flashcards: create/edit modal ─────────────────────────────────────────────
-function fcOpenEditModal(id){
-  const card=id?allFlashcards.find(c=>c.id===id):null;
-  document.getElementById('fc-edit-id').value=id||'';
-  document.getElementById('fc-modal-title-txt').textContent=id?'Edit Flashcard':'New Flashcard';
-  document.getElementById('fc-edit-q').value=card?.question||'';
-  document.getElementById('fc-edit-a').value=card?.answer||'';
-  const sel=document.getElementById('fc-edit-cat');
-  sel.innerHTML='<option value="">— Uncategorized —</option>'+allFcCategories.map(c=>`<option value="${c.id}">${esc(c.name)}</option>`).join('');
-  sel.value=card?.category_id||'';
-  document.getElementById('fc-edit-del-btn').style.display=id?'':'none';
-  document.getElementById('fc-edit-overlay').classList.add('open');
-  setTimeout(()=>document.getElementById('fc-edit-q').focus(),60);
-}
-function fcCloseEditModal(){document.getElementById('fc-edit-overlay').classList.remove('open');}
-async function fcSaveFromModal(){
-  const question=document.getElementById('fc-edit-q').value.trim();
-  const answer=document.getElementById('fc-edit-a').value.trim();
-  if(!question||!answer){showToast('Question and answer are required');return;}
-  const id=document.getElementById('fc-edit-id').value;
-  const body={question,answer,category_id:document.getElementById('fc-edit-cat').value||null};
-  const res=await fetch(id?`/flashcards/${id}`:'/flashcards',{method:id?'PUT':'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const saved=await res.json();
-  await loadFlashcards();
-  fcCloseEditModal();
-  showToast('🧠 Flashcard saved');
-  if(document.getElementById('fc-study').classList.contains('open')){
-    const idx=fcStudyQueue.findIndex(c=>c.id===saved.id);
-    if(idx>=0){ fcStudyQueue[idx]=saved; if(idx===fcStudyIndex) fcRenderStudyCard(); }
-  }else{
-    renderFlashcards();
-  }
-}
-async function fcDeleteFromModal(){
-  const id=document.getElementById('fc-edit-id').value;
-  if(!id)return;
-  if(!confirm('Delete this flashcard?'))return;
-  await fetch(`/flashcards/${id}`,{method:'DELETE'});
-  await loadFlashcards();
-  fcCloseEditModal();
-  if(document.getElementById('fc-study').classList.contains('open')){
-    fcStudyQueue=fcStudyQueue.filter(c=>String(c.id)!==String(id));
-    if(fcStudyIndex>=fcStudyQueue.length) fcStudyIndex=Math.max(0,fcStudyQueue.length-1);
-    fcRevealed=false; fcRenderStudyCard();
-  }else{
-    renderFlashcards();
-  }
-}
-
-// ── Flashcards: study viewer ──────────────────────────────────────────────────
-function fcStartStudy(queue,mode,startIndex){
-  if(!queue.length){showToast('No cards to study');return;}
-  fcStudyQueue=queue; fcStudyIndex=startIndex||0; fcStudyMode=mode; fcRevealed=false;
-  document.getElementById('fc-study').classList.add('open');
-  fcRenderStudyCard();
-}
-function fcCloseStudy(){
-  const wasOpen=document.getElementById('fc-study').classList.contains('open');
-  document.getElementById('fc-study').classList.remove('open');
-  fcStudyQueue=[]; fcStudyIndex=0;
-  if(wasOpen&&currentView==='flashcards') renderFlashcards();
-}
-function fcCurrentCard(){ return fcStudyQueue[fcStudyIndex]; }
-
-function fcRenderStudyCard(){
-  const card=fcCurrentCard();
-  if(!card){ fcRenderStudyComplete(); return; }
-  document.getElementById('fc-study-progress').textContent=`${fcStudyIndex+1} of ${fcStudyQueue.length}`;
-  const favBtn=document.getElementById('fc-fav-btn');
-  favBtn.textContent=card.is_favorite?'★':'☆';
-  favBtn.classList.toggle('active',!!card.is_favorite);
-  const catBadge=card.category?`<span class="fc-study-cat" style="background:${card.category.color}">${esc(card.category.name)}</span>`:'';
-  const noteLink=card.source_note?`<div class="fc-study-note-link" onclick="fcOpenSourceNote(${card.source_note.id})">📄 View source note: ${esc(card.source_note.title)}</div>`:'';
-  const body=document.getElementById('fc-study-body');
-  if(!fcRevealed){
-    body.innerHTML=`
-      ${catBadge}
-      <div class="fc-study-card"><div class="fc-study-q">${esc(card.question)}</div></div>
-      <button class="fc-reveal-btn" onclick="fcReveal()">Reveal Answer</button>
-      <div class="fc-study-hint">Press Space to reveal</div>`;
-  }else{
-    body.innerHTML=`
-      ${catBadge}
-      <div class="fc-study-card">
-        <div class="fc-study-q">${esc(card.question)}</div>
-        <div class="fc-study-divider"></div>
-        <div class="fc-study-a">${esc(card.answer)}</div>
-        ${noteLink}
-      </div>
-      <div class="fc-rate-row">
-        <button class="fc-rate-btn fc-rate-forgot" onclick="fcRate('forgot')">Forgot<small>again soon</small></button>
-        <button class="fc-rate-btn fc-rate-hard" onclick="fcRate('hard')">Hard<small>sooner</small></button>
-        <button class="fc-rate-btn fc-rate-good" onclick="fcRate('good')">Good<small>on track</small></button>
-        <button class="fc-rate-btn fc-rate-easy" onclick="fcRate('easy')">Easy<small>much later</small></button>
-      </div>
-      <div class="fc-study-hint">Keys 1–4 to rate</div>`;
-  }
-  const foot=document.getElementById('fc-study-foot');
-  if(fcStudyMode==='browse'){
-    foot.innerHTML=`
-      <button class="fc-study-nav-btn" onclick="fcStudyPrev()" ${fcStudyIndex===0?'disabled':''}>← Prev</button>
-      <button class="fc-study-nav-btn" onclick="fcStudyRandom()">🔀 Random</button>
-      <button class="fc-study-nav-btn" onclick="fcStudyNext()" ${fcStudyIndex===fcStudyQueue.length-1?'disabled':''}>Next →</button>`;
-  }else{
-    foot.innerHTML=`<span style="font-size:.76rem;color:var(--txt3)">Rate the card to continue</span>`;
-  }
-}
-function fcReveal(){ fcRevealed=true; fcRenderStudyCard(); }
-function fcStudyPrev(){ if(fcStudyIndex>0){fcStudyIndex--;fcRevealed=false;fcRenderStudyCard();} }
-function fcStudyNext(){ if(fcStudyIndex<fcStudyQueue.length-1){fcStudyIndex++;fcRevealed=false;fcRenderStudyCard();}else{fcRenderStudyComplete();} }
-function fcStudyRandom(){
-  if(fcStudyQueue.length<2)return;
-  let i; do{i=Math.floor(Math.random()*fcStudyQueue.length);}while(i===fcStudyIndex);
-  fcStudyIndex=i; fcRevealed=false; fcRenderStudyCard();
-}
-async function fcRate(rating){
-  const card=fcCurrentCard(); if(!card)return;
-  const updated=await(await fetch(`/flashcards/${card.id}/review`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({rating})})).json();
-  const idx=allFlashcards.findIndex(c=>c.id===card.id); if(idx>=0)allFlashcards[idx]=updated;
-  if(fcStudyIndex<fcStudyQueue.length-1){
-    fcStudyQueue[fcStudyIndex]=updated;
-    fcStudyIndex++; fcRevealed=false; fcRenderStudyCard();
-  }else{
-    fcRenderStudyComplete();
-  }
-}
-function fcRenderStudyComplete(){
-  document.getElementById('fc-study-progress').textContent='Done';
-  document.getElementById('fc-study-body').innerHTML=`
-    <div class="fc-complete">
-      <div style="font-size:3rem">🎉</div>
-      <div style="font-size:1.2rem;font-weight:800">All done!</div>
-      <div style="color:var(--txt2);font-size:.85rem">You've been through every card in this set.</div>
-      <button class="fc-start-btn" onclick="fcCloseStudy()">Back to Flashcards</button>
-    </div>`;
-  document.getElementById('fc-study-foot').innerHTML='';
-}
-async function fcToggleFavoriteCurrent(){
-  const card=fcCurrentCard(); if(!card)return;
-  const updated=await(await fetch(`/flashcards/${card.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_favorite:!card.is_favorite})})).json();
-  fcStudyQueue[fcStudyIndex]=updated;
-  const idx=allFlashcards.findIndex(c=>c.id===card.id); if(idx>=0)allFlashcards[idx]=updated;
-  fcRenderStudyCard();
-}
-function fcEditCurrent(){ const card=fcCurrentCard(); if(card)fcOpenEditModal(card.id); }
-async function fcDeleteCurrent(){
-  const card=fcCurrentCard(); if(!card)return;
-  if(!confirm('Delete this flashcard?'))return;
-  await fetch(`/flashcards/${card.id}`,{method:'DELETE'});
-  allFlashcards=allFlashcards.filter(c=>c.id!==card.id);
-  fcStudyQueue.splice(fcStudyIndex,1);
-  if(fcStudyIndex>=fcStudyQueue.length) fcStudyIndex=Math.max(0,fcStudyQueue.length-1);
-  fcRevealed=false;
-  fcRenderStudyCard();
-}
-function fcOpenSourceNote(pageId){
-  const found=findPage(pageId);
-  if(!found){showToast('Source note no longer exists');return;}
-  fcCloseStudy();
-  switchView('notes');
-  setTimeout(()=>nbOpenPage(found.book.id,found.chapter.id,pageId),100);
-}
-
-// ── AI Settings ────────────────────────────────────────────────────────────────
-let aiSettings={base_url:'http://localhost:11434',model:'qwen3:8b'};
-
-async function loadAiSettings(){
-  try{ aiSettings=await(await fetch('/ai/settings')).json(); }catch(e){}
-}
-
-function openAiSettingsModal(){
-  document.getElementById('ai-url-inp').value=aiSettings.base_url;
-  document.getElementById('ai-model-inp').value=aiSettings.model;
-  document.getElementById('ai-model-inp').style.display='';
-  document.getElementById('ai-model-select').style.display='none';
-  document.getElementById('ai-status-box').innerHTML='';
-  document.getElementById('ai-settings-overlay').classList.add('open');
-  aiTestConnection();
-}
-function closeAiSettingsModal(){document.getElementById('ai-settings-overlay').classList.remove('open');}
-
-function aiCurrentModelValue(){
-  const sel=document.getElementById('ai-model-select'),inp=document.getElementById('ai-model-inp');
-  return (sel.style.display!=='none'?sel.value:inp.value).trim();
-}
-
-async function aiTestConnection(){
-  const box=document.getElementById('ai-status-box');
-  const btn=document.getElementById('ai-test-btn');
-  const url=document.getElementById('ai-url-inp').value.trim()||aiSettings.base_url;
-  const model=aiCurrentModelValue()||aiSettings.model;
-  box.innerHTML=`<div class="ai-status-box ai-status-pending">Testing connection…</div>`;
-  btn.disabled=true;
-  try{
-    const res=await fetch('/ai/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:url,model})});
-    const data=await res.json();
-    if(data.connected){
-      const sel=document.getElementById('ai-model-select'), inp=document.getElementById('ai-model-inp');
-      sel.innerHTML=data.models.map(m=>`<option value="${esc(m)}" ${m===model?'selected':''}>${esc(m)}</option>`).join('');
-      sel.style.display=''; inp.style.display='none';
-      box.innerHTML=`<div class="ai-status-box ai-status-ok">
-        <span>✓ Connected — ${data.models.length} model${data.models.length!==1?'s':''} available</span>
-        <span class="ai-status-models">${data.model_available?`✓ "${esc(model)}" is installed and ready`:`⚠ "${esc(model)}" is not installed — pull it with Ollama, or pick one from the list above`}</span>
-      </div>`;
-    }else{
-      box.innerHTML=`<div class="ai-status-box ai-status-err">✗ ${esc(data.error)}</div>`;
-    }
-  }catch(e){
-    box.innerHTML=`<div class="ai-status-box ai-status-err">✗ Request failed: ${esc(e.message)}</div>`;
-  }finally{
-    btn.disabled=false;
-  }
-}
-
-async function aiSaveSettings(){
-  const url=document.getElementById('ai-url-inp').value.trim();
-  const model=aiCurrentModelValue();
-  if(!url||!model){showToast('URL and model are required');return;}
-  aiSettings=await(await fetch('/ai/settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({base_url:url,model})})).json();
-  showToast('🤖 AI settings saved');
-  closeAiSettingsModal();
-}
-
 // ── Keyboard shortcut modal ───────────────────────────────────────────────────
 function openShortcutModal(){document.getElementById('shortcut-overlay').classList.add('open');}
 function closeShortcutModal(){document.getElementById('shortcut-overlay').classList.remove('open');}
@@ -4814,25 +3984,13 @@ function closeShortcutModal(){document.getElementById('shortcut-overlay').classL
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
   const inInput=document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT';
-  if(e.key==='Escape'){closePanel();closeRemModal();closeSRemModal();closeAlertOverlay();hideStatusMenu();clearSel();closeShortcutModal();closeMeetingModal();closeCalDay();closeTaskPage();fcCloseEditModal();fcCloseStudy();closeAiSettingsModal();}
+  if(e.key==='Escape'){closePanel();closeRemModal();closeSRemModal();closeAlertOverlay();hideStatusMenu();clearSel();closeShortcutModal();closeMeetingModal();closeCalDay();closeTaskPage();}
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.getElementById('search').focus();}
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
     if(document.getElementById('detail-panel').classList.contains('open'))savePanel();
   }
   if(e.key==='n'&&!e.ctrlKey&&!e.metaKey&&!inInput){openPanel(null);}
   if(e.key==='?'&&!e.ctrlKey&&!e.metaKey&&!inInput){e.preventDefault();openShortcutModal();}
-  // Flashcard study viewer shortcuts
-  if(!inInput&&document.getElementById('fc-study')?.classList.contains('open')){
-    if(e.key===' '){e.preventDefault();if(!fcRevealed)fcReveal();}
-    else if(fcRevealed&&e.key==='1'){fcRate('forgot');}
-    else if(fcRevealed&&e.key==='2'){fcRate('hard');}
-    else if(fcRevealed&&e.key==='3'){fcRate('good');}
-    else if(fcRevealed&&e.key==='4'){fcRate('easy');}
-    else if(e.key==='ArrowLeft'&&fcStudyMode==='browse'){fcStudyPrev();}
-    else if(e.key==='ArrowRight'&&fcStudyMode==='browse'){fcStudyNext();}
-    else if(e.key==='r'&&fcStudyMode==='browse'){fcStudyRandom();}
-    else if(e.key==='f'){fcToggleFavoriteCurrent();}
-  }
 });
 </script>
 </body>
