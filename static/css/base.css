@@ -1,0 +1,522 @@
+  <link rel="stylesheet" href="/static/css/base.css"/>
+  <link rel="stylesheet" href="/static/css/task-tracker.css"/>
+  <link rel="stylesheet" href="/static/css/notes.css"/>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">Task<span>Flow</span></div>
+  <div class="view-tabs">
+    <button class="view-tab-primary" data-v="tasks" onclick="switchView(taskSubView)">Tasks<span class="rem-badge" id="today-badge" style="display:none;background:#ef4444">0</span></button>
+    <button class="view-tab-primary" data-v="workflows" onclick="switchView('workflows')">⚡ Workflows</button>
+    <button class="view-tab-primary" data-v="notes"     onclick="switchView('notes')">📝 Notes</button>
+    <span class="nav-divider"></span>
+    <button class="view-tab"         data-v="list"      onclick="switchView('list')">≡ List</button>
+    <button class="view-tab"         data-v="kanban"    onclick="switchView('kanban')">⊞ Board</button>
+    <button class="view-tab"         data-v="calendar"  onclick="switchView('calendar')">📅 Cal</button>
+    <button class="view-tab"         data-v="reminders" onclick="switchView('reminders')">🔔<span class="rem-badge" id="rem-badge" style="display:none">0</span></button>
+  </div>
+  <div class="search-wrap">
+    <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search" type="text" placeholder="Search… (Ctrl+K)" oninput="onSearch()"/>
+  </div>
+  <select id="sort" class="hdr-sel" onchange="onSort()">
+    <option value="newest">Newest</option>
+    <option value="oldest">Oldest</option>
+    <option value="priority">Priority</option>
+    <option value="due_date">Due date</option>
+    <option value="az">A → Z</option>
+  </select>
+  <button class="hdr-btn primary" onclick="openPanel(null)">+ Add Task</button>
+  <div class="more-menu-wrap">
+    <button class="hdr-btn" id="more-btn" onclick="toggleMoreMenu()" title="More options">··· More</button>
+    <div class="more-dropdown" id="more-dropdown">
+      <button class="more-item" id="sel-btn"    onclick="toggleSelectMode();closeMoreMenu()"><span class="more-item-icon">☐</span>Select tasks</button>
+      <button class="more-item" id="group-btn"  onclick="toggleGrouping();closeMoreMenu()"  ><span class="more-item-icon">⊞</span>Group by project</button>
+      <div class="more-sep"></div>
+      <button class="more-item" onclick="openStandaloneRemModal(null);closeMoreMenu()"><span class="more-item-icon">🔔</span>Add reminder</button>
+      <button class="more-item" onclick="openMeetingModal(null);closeMoreMenu()"      ><span class="more-item-icon">📅</span>Add meeting</button>
+      <div class="more-sep"></div>
+      <button class="more-item" onclick="exportTasks();closeMoreMenu()"     ><span class="more-item-icon">⬇</span>Export CSV</button>
+      <button class="more-item" onclick="openShortcutModal();closeMoreMenu()"><span class="more-item-icon">⌨</span>Keyboard shortcuts</button>
+      <button class="more-item" id="theme-btn"  onclick="toggleTheme();closeMoreMenu()" ><span class="more-item-icon">☀</span><span id="theme-lbl">Light mode</span></button>
+    </div>
+  </div>
+</header>
+
+<div id="toast-wrap"></div>
+
+<!-- ── Progress strip (Today / Next7 views) ───────────────────────────────── -->
+<div id="progress-strip">
+  <div class="ps-today">
+    <svg class="ps-today-ring" viewBox="0 0 36 36">
+      <circle cx="18" cy="18" r="15" fill="none" stroke="var(--surf2)" stroke-width="4"/>
+      <circle id="ps-ring-arc" cx="18" cy="18" r="15" fill="none" stroke="#22c55e" stroke-width="4"
+        stroke-dasharray="0 94" stroke-dashoffset="23.5" stroke-linecap="round" style="transition:stroke-dasharray .5s"/>
+    </svg>
+    <div class="ps-today-info">
+      <span class="ps-today-count" id="ps-today-count">0/0</span>
+      <span class="ps-today-label" id="ps-today-label">due today</span>
+    </div>
+  </div>
+  <div class="ps-divider"></div>
+  <div class="ps-overall">
+    <span class="ps-pct" id="ps-pct">0%</span>
+    <div class="ps-bar-wrap">
+      <div class="ps-bar-track"><div class="ps-bar-fill" id="ps-bar" style="width:0%"></div></div>
+      <span class="ps-lbl" id="ps-lbl">overall completion</span>
+    </div>
+  </div>
+  <span class="ps-overdue" id="ps-overdue" style="display:none">⚠ <span id="ps-overdue-n">0</span> overdue</span>
+</div>
+
+<!-- ── Main wrap ───────────────────────────────────────────────────────────── -->
+<div id="main-wrap">
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="dashboard"></div>
+
+  <!-- Task type filter -->
+  <div class="type-row" id="type-row">
+    <span class="type-lbl">Type:</span>
+    <button class="type-btn active" data-tp="all"      onclick="setTypeFilter('all',this)" style="background:var(--surf2);border-color:var(--border2);color:var(--txt)">All</button>
+    <button class="type-btn" data-tp="quick"    onclick="setTypeFilter('quick',this)"   ><span>⚡</span>Quick</button>
+    <button class="type-btn" data-tp="project"  onclick="setTypeFilter('project',this)" ><span>📁</span>Project</button>
+    <button class="type-btn" data-tp="general"  onclick="setTypeFilter('general',this)" ><span>📋</span>General</button>
+    <button class="type-btn" data-tp="learning" onclick="setTypeFilter('learning',this)"><span>📚</span>Learning</button>
+    <button class="type-btn" data-tp="company"  onclick="setTypeFilter('company',this)" ><span>🏢</span>Company</button>
+  </div>
+
+  <!-- Status filters -->
+  <div class="filter-row" id="filter-row">
+    <button class="filter-btn active" data-s="all"         onclick="setFilter('all',this)">All <span class="cnt" id="cnt-all">0</span></button>
+    <button class="filter-btn"        data-s="not_started" onclick="setFilter('not_started',this)">Not Started <span class="cnt" id="cnt-not_started">0</span></button>
+    <button class="filter-btn"        data-s="todo"        onclick="setFilter('todo',this)">To Do <span class="cnt" id="cnt-todo">0</span></button>
+    <button class="filter-btn"        data-s="in_process"  onclick="setFilter('in_process',this)">In Process <span class="cnt" id="cnt-in_process">0</span></button>
+    <button class="filter-btn"        data-s="hold"        onclick="setFilter('hold',this)">Hold <span class="cnt" id="cnt-hold">0</span></button>
+    <button class="filter-btn"        data-s="completed"   onclick="setFilter('completed',this)">Completed <span class="cnt" id="cnt-completed">0</span></button>
+    <button class="filter-btn"        data-s="cancelled"   onclick="setFilter('cancelled',this)">Cancelled <span class="cnt" id="cnt-cancelled">0</span></button>
+  </div>
+  <!-- Tag filter -->
+  <div class="tag-row" id="tag-row"></div>
+
+  <!-- List toolbar (count + filter chips + compact toggle) -->
+  <div id="list-toolbar" style="display:none"></div>
+
+  <!-- Views -->
+  <div id="view-today"     style="display:none"></div>
+  <div id="view-next7"     style="display:none"></div>
+  <div id="view-list"      class="view-pad"></div>
+  <div id="view-kanban"    style="display:none"></div>
+  <div id="view-calendar"  style="display:none" class="view-pad"></div>
+  <div id="view-reminders" style="display:none" class="view-pad"></div>
+  <div id="view-workflows" style="display:none" class="view-pad"></div>
+  <div id="view-notes"     style="display:none"></div>
+
+</div><!-- /main-wrap -->
+
+<!-- ── Bulk bar ────────────────────────────────────────────────────────────── -->
+<div id="bulk-bar">
+  <span class="bulk-cnt" id="bulk-cnt">0 selected</span>
+  <span class="bulk-sep" style="width:1px;height:18px;background:var(--border2)"></span>
+  <span style="font-size:.72rem;color:var(--txt2)">Move to:</span>
+  <select class="bulk-sel" id="bulk-status">
+    <option value="not_started">Not Started</option><option value="todo">To Do</option>
+    <option value="in_process">In Process</option><option value="hold">Hold</option>
+    <option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+  </select>
+  <button class="bulk-btn" onclick="bulkApplyStatus()">Apply</button>
+  <span class="bulk-sep" style="width:1px;height:18px;background:var(--border2)"></span>
+  <button class="bulk-btn danger" onclick="bulkDelete()">Delete</button>
+  <button class="bulk-btn" style="color:var(--txt3)" onclick="clearSel()">✕ Clear</button>
+</div>
+
+<!-- ── Status popover ─────────────────────────────────────────────────────── -->
+<div id="status-menu" class="hidden">
+  <div class="smenu-item" data-s="not_started" onclick="quickStatus('not_started')"><span class="smenu-dot" style="background:#6b7280"></span>Not Started</div>
+  <div class="smenu-item" data-s="todo"        onclick="quickStatus('todo')">       <span class="smenu-dot" style="background:#3b82f6"></span>To Do</div>
+  <div class="smenu-item" data-s="in_process"  onclick="quickStatus('in_process')"> <span class="smenu-dot" style="background:#22c55e"></span>In Process</div>
+  <div class="smenu-item" data-s="hold"        onclick="quickStatus('hold')">       <span class="smenu-dot" style="background:#a855f7"></span>Hold</div>
+  <div class="smenu-item" data-s="completed"   onclick="quickStatus('completed')">  <span class="smenu-dot" style="background:#10b981"></span>Completed</div>
+  <div class="smenu-item" data-s="cancelled"   onclick="quickStatus('cancelled')">  <span class="smenu-dot" style="background:#ef4444"></span>Cancelled</div>
+</div>
+
+<!-- ── Keyboard shortcut overlay ──────────────────────────────────────────── -->
+<div id="shortcut-overlay" onclick="if(event.target===this)closeShortcutModal()">
+  <div class="shortcut-box">
+    <div class="shortcut-hdr">
+      <span class="shortcut-hdr-title">⌨ Keyboard Shortcuts</span>
+      <button class="shortcut-close" onclick="closeShortcutModal()">✕</button>
+    </div>
+    <div class="shortcut-body">
+      <div class="shortcut-row"><span class="shortcut-desc">New task</span><kbd class="shortcut-key">N</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Close / Cancel</span><kbd class="shortcut-key">Esc</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Search</span><kbd class="shortcut-key">Ctrl+K</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Save panel</span><kbd class="shortcut-key">Ctrl+Enter</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Shortcut help</span><kbd class="shortcut-key">?</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Toggle priority</span><kbd class="shortcut-key">Click dot</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Quick complete</span><kbd class="shortcut-key">Click ✓</kbd></div>
+      <div class="shortcut-row"><span class="shortcut-desc">Status menu</span><kbd class="shortcut-key">Click badge</kbd></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Meeting modal ──────────────────────────────────────────────────────── -->
+<div id="meeting-overlay" onclick="if(event.target===this)closeMeetingModal()">
+  <div class="meeting-modal">
+    <div class="mtg-modal-head">
+      <div class="mtg-modal-title">📅 <span id="mtg-modal-title-txt">New Meeting</span></div>
+    </div>
+    <div class="mtg-modal-body">
+      <input type="hidden" id="mtg-id"/>
+      <label>Title *</label>
+      <input type="text" id="mtg-title" class="m-input" placeholder="Meeting title…"/>
+
+      <div class="mtg-grid2" style="margin-top:4px">
+        <div><label>Date *</label><input type="date" id="mtg-date" class="m-input"/></div>
+        <div><label>Time</label><input type="time" id="mtg-time" class="m-input"/></div>
+      </div>
+      <div class="mtg-grid2">
+        <div>
+          <label>Duration</label>
+          <select id="mtg-duration" class="m-input">
+            <option value="15">15 min</option><option value="30">30 min</option>
+            <option value="45">45 min</option><option value="60" selected>1 hour</option>
+            <option value="90">1.5 hrs</option><option value="120">2 hrs</option>
+            <option value="180">3 hrs</option>
+          </select>
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="mtg-status" class="m-input">
+            <option value="upcoming">Upcoming</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </div>
+      <label>Location / Link</label>
+      <input type="text" id="mtg-location" class="m-input" placeholder="Room, Zoom link…"/>
+      <label>Notes</label>
+      <textarea id="mtg-desc" class="m-input" rows="2" placeholder="Agenda, notes…" style="resize:vertical"></textarea>
+      <label>Recurrence</label>
+      <div class="mtg-recur-grid">
+        <button class="recur-btn sel" data-v="none"     onclick="selMtgRecur(this)">None</button>
+        <button class="recur-btn"     data-v="daily"    onclick="selMtgRecur(this)">Daily</button>
+        <button class="recur-btn"     data-v="weekdays" onclick="selMtgRecur(this)">Weekdays</button>
+        <button class="recur-btn"     data-v="weekly"   onclick="selMtgRecur(this)">Weekly</button>
+        <button class="recur-btn"     data-v="biweekly" onclick="selMtgRecur(this)">2-week</button>
+        <button class="recur-btn"     data-v="monthly"  onclick="selMtgRecur(this)">Monthly</button>
+      </div>
+      <label style="margin-top:14px">Discussion Points</label>
+      <div class="mtg-points-list" id="mtg-points-list"></div>
+      <div class="sub-add-row" style="margin-top:6px">
+        <input type="text" id="mtg-point-inp" class="m-input" placeholder="Add discussion point… (Enter)"
+          onkeydown="if(event.key==='Enter')addMeetingPointModal()"/>
+        <button class="sub-add-btn" onclick="addMeetingPointModal()">Add</button>
+      </div>
+    </div>
+    <div class="mtg-modal-foot">
+      <button class="btn-danger" id="mtg-del-btn" onclick="deleteMeetingFromModal()" style="display:none">Delete</button>
+      <button class="btn-cancel" onclick="closeMeetingModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveMeeting()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Calendar day popup ──────────────────────────────────────────────────── -->
+<div id="calday-overlay" onclick="if(event.target===this)closeCalDay()">
+  <div class="calday-box">
+    <div class="calday-head">
+      <span class="calday-date" id="calday-date-lbl"></span>
+      <button style="background:none;border:none;color:var(--txt3);font-size:1rem;cursor:pointer" onclick="closeCalDay()">✕</button>
+    </div>
+    <div class="calday-body" id="calday-body"></div>
+    <div class="calday-foot">
+      <button class="btn-cancel" onclick="openPanelFromCalDay()">+ Task</button>
+      <button class="btn-save"   onclick="openMeetingFromCalDay()">+ Meeting</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Right detail panel ─────────────────────────────────────────────────── -->
+<div id="detail-panel">
+  <div class="panel-topbar">
+    <div class="panel-topbar-row">
+      <div class="panel-status-inline" id="panel-status-row"></div>
+      <button class="panel-close" onclick="closePanel()">✕</button>
+    </div>
+    <input type="text" id="p-title" class="panel-title-input" placeholder="Task title…"/>
+    <input type="hidden" id="p-id"/>
+  </div>
+
+  <div class="panel-tabs">
+    <button class="ptab active" onclick="switchPTab('details',this)">Details</button>
+    <button class="ptab"        id="panel-subtasks-tab" onclick="switchPTab('subtasks',this)">Subtasks</button>
+    <button class="ptab"        id="steps-tab-btn" onclick="switchPTab('steps',this)">⚡ Steps</button>
+    <button class="ptab"        onclick="switchPTab('time',this)">Time</button>
+    <button class="ptab"        onclick="switchPTab('activity',this)">Activity</button>
+  </div>
+
+  <!-- Details tab -->
+  <div class="panel-body" id="ptab-details">
+    <span class="pf-label">Description</span>
+    <textarea id="p-desc" class="pf-input" placeholder="Add notes…" rows="3"></textarea>
+
+    <div class="pf-row" style="margin-top:11px">
+      <div>
+        <span class="pf-label">Status</span>
+        <select id="p-status" class="pf-input">
+          <option value="not_started">Not Started</option><option value="todo">To Do</option>
+          <option value="in_process">In Process</option><option value="hold">Hold</option>
+          <option value="completed">Completed</option><option value="cancelled">Cancelled</option>
+        </select>
+      </div>
+      <div>
+        <span class="pf-label">Priority</span>
+        <select id="p-priority" class="pf-input">
+          <option value="high">🔴 High</option>
+          <option value="medium" selected>🟡 Medium</option>
+          <option value="low">⚫ Low</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pf-row3" style="margin-top:11px">
+      <div>
+        <span class="pf-label">Due Date</span>
+        <input type="date" id="p-due" class="pf-input"/>
+      </div>
+      <div>
+        <span class="pf-label">Due Time</span>
+        <input type="time" id="p-due-time" class="pf-input"/>
+      </div>
+      <div>
+        <span class="pf-label">Estimate</span>
+        <select id="p-est" class="pf-input">
+          <option value="0">—</option>
+          <option value="15">15 min</option><option value="30">30 min</option>
+          <option value="45">45 min</option><option value="60">1 hour</option>
+          <option value="90">1.5 hrs</option><option value="120">2 hrs</option>
+          <option value="180">3 hrs</option><option value="240">4 hrs</option>
+          <option value="300">5+ hrs</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pf-row" style="margin-top:11px">
+      <div>
+        <span class="pf-label">Project</span>
+        <input type="text" id="p-project" class="pf-input" placeholder="e.g. Website"/>
+      </div>
+      <div>
+        <span class="pf-label">Repeat</span>
+        <select id="p-recurrence" class="pf-input">
+          <option value="none">— No repeat</option>
+          <option value="daily">↻ Daily</option>
+          <option value="weekdays">↻ Weekdays (Mon–Fri)</option>
+          <option value="weekly">↻ Weekly</option>
+          <option value="biweekly">↻ Every 2 weeks</option>
+          <option value="monthly">↻ Monthly</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="pf-row" id="p-tasktype-row" style="margin-top:11px">
+      <div style="flex:1">
+        <span class="pf-label">Task Type</span>
+        <select id="p-task-type" class="pf-input">
+          <option value="general">📋 General</option>
+          <option value="quick">⚡ Quick</option>
+          <option value="project">📁 Project</option>
+          <option value="learning">📚 Learning</option>
+          <option value="company">🏢 Company</option>
+          <option value="workflow" style="display:none">⚡ Workflow</option>
+        </select>
+      </div>
+      <div style="flex:1">
+        <span class="pf-label">Set reminder</span>
+        <button class="pf-input" id="p-rem-btn" style="text-align:left;cursor:pointer" onclick="openRemModalFromPanel()">🔔 —</button>
+      </div>
+    </div>
+
+    <span class="pf-label">Tags</span>
+    <div class="panel-tags-attached" id="p-tags-attached"></div>
+    <div class="panel-tags-avail"    id="p-tags-avail"></div>
+    <div class="tag-create-row" style="margin-top:6px">
+      <input type="text" id="p-new-tag" class="pf-input" placeholder="New tag…" style="flex:1" onkeydown="if(event.key==='Enter')createTagPanel()"/>
+      <input type="color" id="p-tag-color" class="tag-color-inp" value="#3b82f6"/>
+      <button class="sub-add-btn" onclick="createTagPanel()">+ Tag</button>
+    </div>
+  </div>
+
+  <!-- Subtasks tab -->
+  <div class="panel-body" id="ptab-subtasks" style="display:none">
+    <div id="p-sub-prog"></div>
+    <div class="sub-list" id="p-sub-list"></div>
+    <div class="sub-add-row">
+      <input type="text" id="p-sub-input" class="pf-input" placeholder="Add subtask…" onkeydown="if(event.key==='Enter')addSubtask()"/>
+      <button class="sub-add-btn" onclick="addSubtask()">Add</button>
+    </div>
+  </div>
+
+  <!-- Steps tab -->
+  <div class="panel-body" id="ptab-steps" style="display:none">
+    <div id="steps-prog-area"></div>
+    <div class="step-list" id="step-list"></div>
+    <div class="step-add-row">
+      <input type="text" class="step-add-inp" id="step-add-inp" placeholder="+ Add step… (Enter)"/>
+      <button class="step-add-btn" onclick="addStep()">Add</button>
+    </div>
+  </div>
+
+  <!-- Time tab -->
+  <div class="panel-body" id="ptab-time" style="display:none">
+    <div class="timer-box">
+      <div class="timer-disp" id="p-timer-disp">00:00:00</div>
+      <div class="timer-btns">
+        <button class="t-start" id="p-t-start" onclick="startTimer()">▶ Start</button>
+        <button class="t-stop"  id="p-t-stop"  onclick="stopTimer()" style="display:none">⏹ Stop</button>
+      </div>
+      <div class="time-total-lbl" id="p-time-total"></div>
+    </div>
+    <div style="font-size:.72rem;font-weight:600;color:var(--txt2);margin-bottom:5px">Sessions</div>
+    <div class="te-list" id="p-te-list"></div>
+  </div>
+
+  <!-- Activity tab -->
+  <div class="panel-body" id="ptab-activity" style="display:none">
+    <div class="act-list" id="p-act-list"></div>
+  </div>
+
+  <div class="panel-foot">
+    <button class="btn-delete-task" id="p-del-btn" onclick="deletePanelTask()" style="display:none"><span id="p-del-lbl">Delete task</span></button>
+    <button class="btn-cancel" onclick="closePanel()">Close</button>
+    <button class="btn-save"   onclick="savePanel()">Save</button>
+  </div>
+</div>
+
+<!-- ── Full-page Task Tracker ──────────────────────────────────────────────── -->
+<div id="task-page">
+  <div class="tp-topbar" id="tp-topbar"></div>
+  <div id="tp-prog-section"></div>
+  <!-- View toggle bar -->
+  <div style="background:var(--surf);border-bottom:1px solid var(--border);padding:7px 22px;display:flex;align-items:center;gap:14px;flex-shrink:0">
+    <div class="tp-view-toggle">
+      <button class="tp-vtab" data-tv="board" onclick="tpSwitchView('board')">⊞ Board</button>
+      <button class="tp-vtab active" data-tv="flow" onclick="tpSwitchView('flow')">⚡ Flow</button>
+    </div>
+    <span style="font-size:.7rem;color:var(--txt3)">Flow — visual diagram with parallel steps · Board — Kanban columns</span>
+  </div>
+  <!-- Board view: horizontal Kanban columns -->
+  <div class="tp-track" id="tp-track" style="display:none"></div>
+  <!-- Flow view: graphical workflow diagram -->
+  <div id="tp-flow"></div>
+</div>
+
+<!-- ── Hard-to-miss Alert Overlay ──────────────────────────────────────────── -->
+<div id="alert-overlay">
+  <div class="alert-box">
+    <div class="alert-head">
+      <span class="alert-head-icon">⏰</span>
+      <span class="alert-head-title">Reminder Alert</span>
+      <span class="alert-head-time" id="alert-head-time"></span>
+    </div>
+    <div class="alert-items" id="alert-items"></div>
+    <div class="alert-foot">
+      <span class="alert-snooze-all-lbl">Snooze all:</span>
+      <button class="snooze-all-btn" onclick="snoozeAll(5)">5 min</button>
+      <button class="snooze-all-btn" onclick="snoozeAll(10)">10 min</button>
+      <button class="snooze-all-btn" onclick="snoozeAll(15)">15 min</button>
+      <button class="snooze-all-btn" onclick="snoozeAll(30)">30 min</button>
+      <button class="snooze-all-btn" onclick="snoozeAll(60)">1 hour</button>
+      <button class="dismiss-all-btn" onclick="dismissAll()">✓ Dismiss All</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Standalone Reminder Modal ────────────────────────────────────────────── -->
+<div class="overlay" id="srem-overlay" onclick="handleSRemOverlay(event)">
+  <div class="modal" style="max-width:480px">
+    <div class="modal-head"><h2 id="srem-modal-title">🔔 New Reminder</h2></div>
+    <div class="modal-body">
+      <input type="hidden" id="srem-id"/>
+      <label>Title</label>
+      <input type="text" id="srem-title" class="m-input" placeholder="e.g. Team sync, Call Alex, Submit report…"/>
+      <label>Type</label>
+      <div class="rem-type-grid">
+        <button class="rem-type-btn sel" data-v="meeting"  onclick="selRemType(this)"><span class="rt-icon">📅</span>Meeting</button>
+        <button class="rem-type-btn"     data-v="call"     onclick="selRemType(this)"><span class="rt-icon">📞</span>Call</button>
+        <button class="rem-type-btn"     data-v="task"     onclick="selRemType(this)"><span class="rt-icon">✅</span>Task</button>
+        <button class="rem-type-btn"     data-v="deadline" onclick="selRemType(this)"><span class="rt-icon">⏰</span>Deadline</button>
+        <button class="rem-type-btn"     data-v="personal" onclick="selRemType(this)"><span class="rt-icon">🏠</span>Personal</button>
+        <button class="rem-type-btn"     data-v="general"  onclick="selRemType(this)"><span class="rt-icon">🔔</span>General</button>
+      </div>
+      <label>Remind me at</label>
+      <input type="datetime-local" id="srem-datetime" class="m-input"/>
+      <label>Notes (optional)</label>
+      <textarea id="srem-note" class="m-input" rows="2" placeholder="Add details, location, agenda…" style="resize:vertical"></textarea>
+      <label>Repeat</label>
+      <div class="recur-grid">
+        <button class="recur-btn sel" data-v="none"     onclick="selSRemRecur(this)">Once</button>
+        <button class="recur-btn"     data-v="daily"    onclick="selSRemRecur(this)">Daily</button>
+        <button class="recur-btn"     data-v="weekdays" onclick="selSRemRecur(this)">Weekdays</button>
+        <button class="recur-btn"     data-v="weekly"   onclick="selSRemRecur(this)">Weekly</button>
+        <button class="recur-btn"     data-v="monthly"  onclick="selSRemRecur(this)">Monthly</button>
+      </div>
+      <label>Sound</label>
+      <div class="sound-row">
+        <button class="sound-btn sel" data-v="1" onclick="selSRemSound(this)">🔔 Sound On</button>
+        <button class="sound-btn"     data-v="0" onclick="selSRemSound(this)">🔕 Silent</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" id="srem-del-btn" onclick="deleteStandaloneReminder()" style="display:none">Delete</button>
+      <button class="btn-cancel" onclick="closeSRemModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveStandaloneReminder()">Save Reminder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Reminder modal ─────────────────────────────────────────────────────── -->
+<div class="overlay" id="rem-overlay" onclick="handleRemOverlay(event)">
+  <div class="modal">
+    <div class="modal-head"><h2>🔔 Reminder</h2></div>
+    <div class="modal-body">
+      <input type="hidden" id="r-task-id"/>
+      <div class="rem-task-nm" id="r-task-nm"></div>
+      <div id="r-existing"></div>
+      <label>Remind me at</label>
+      <input type="datetime-local" id="r-datetime" class="m-input"/>
+      <label>Repeat</label>
+      <div class="recur-grid">
+        <button class="recur-btn sel" data-v="none"     onclick="selRecur(this)">Once</button>
+        <button class="recur-btn"     data-v="daily"    onclick="selRecur(this)">Daily</button>
+        <button class="recur-btn"     data-v="weekdays" onclick="selRecur(this)">Weekdays</button>
+        <button class="recur-btn"     data-v="weekly"   onclick="selRecur(this)">Weekly</button>
+        <button class="recur-btn"     data-v="monthly"  onclick="selRecur(this)">Monthly</button>
+      </div>
+      <label>Sound</label>
+      <div class="sound-row">
+        <button class="sound-btn sel" data-v="1" onclick="selSound(this)">🔔 On</button>
+        <button class="sound-btn"     data-v="0" onclick="selSound(this)">🔕 Off</button>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-danger" id="r-remove-btn" onclick="removeReminder()" style="display:none">Remove</button>
+      <button class="btn-cancel" onclick="closeRemModal()">Cancel</button>
+      <button class="btn-save"   onclick="saveReminder()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════ JavaScript ═══ -->
+<script>
+  <script src="/static/js/app.js"></script>
+  <script src="/static/js/tasks.js"></script>
+  <script src="/static/js/workflow.js"></script>
+  <script src="/static/js/task-tracker.js"></script>
+  <script src="/static/js/notes.js"></script>
+</body>
+</html>

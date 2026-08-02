@@ -1,0 +1,18 @@
+services:
+  taskflow:
+    build: .
+    ports:
+      - "5001:5001"
+    environment:
+      - DB_PATH=/app/data/tasks.db
+    # No env_file here on purpose: nothing in the current app reads a secret at
+    # runtime (taskflow/.env's ANTHROPIC_API_KEY is unused leftover config), and
+    # referencing a .env file that doesn't exist yet on a fresh VM/clone would
+    # make `docker compose up` fail before the container even starts. Add
+    # `env_file: [.env]` back here if/when a real secret is needed.
+    volumes:
+      - taskflow-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  taskflow-data:
