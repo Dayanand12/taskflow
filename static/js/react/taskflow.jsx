@@ -601,6 +601,7 @@ function PageItem({ b, c, p, activePageId }) {
     <div className={`nb-pg-item ${isActive ? 'active' : ''}`} data-color={color} onClick={() => nbOpenPage(b.id, c.id, p.id)} id={`nbpg-${p.id}`}>
       <div className="nb-pg-dot" style={{ background: NOTE_COLORS[color] || NOTE_COLORS.default }}></div>
       <span className="nb-pg-title" title={p.title || 'Untitled'}>{p.title || 'Untitled'}</span>
+      {p.is_locked ? <span className="nb-pg-lock" title="Password protected">🔒</span> : null}
       <div className="nb-pg-acts" onClick={e => e.stopPropagation()}>
         <button className="nb-pg-act-btn" onClick={() => nbDeletePage(b.id, c.id, p.id)} title="Delete page">🗑</button>
       </div>
@@ -688,9 +689,9 @@ function NoteSearchResults({ activePageId, noteSearchQ }) {
     <div>
       {hits.map(({ book: b, chapter: c, page: p }) => (
         <div key={p.id} className={`nb-sr-item ${p.id === activePageId ? 'active' : ''}`} onClick={() => nbOpenPage(b.id, c.id, p.id)}>
-          <div className="nb-sr-title">{p.title || 'Untitled'}</div>
+          <div className="nb-sr-title">{p.title || 'Untitled'}{p.is_locked ? ' 🔒' : ''}</div>
           <div className="nb-sr-path">📚 {b.title} › 📖 {c.title}</div>
-          <div className="nb-sr-preview">{noteBodyText(p.body || '').slice(0, 100).trim()}</div>
+          <div className="nb-sr-preview">{p.is_locked ? 'Password protected' : noteBodyText(p.body || '').slice(0, 100).trim()}</div>
         </div>
       ))}
     </div>

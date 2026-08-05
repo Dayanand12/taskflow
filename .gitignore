@@ -13,6 +13,9 @@ env/
 # Environment variables
 .env
 
+# Flask session signing key (auto-generated on first run)
+.flask_secret_key
+
 # SQLite database
 *.db
 

@@ -12,7 +12,7 @@
   --txt:      #f1f5f9; --txt2:    #94a3b8; --txt3:    #475569;
   --accent:   #3b82f6; --accent-h:#2563eb;
   --danger:   #ef4444; --success: #22c55e; --warn:    #f59e0b;
-  --panel-w:  390px;   --hdr-h:   52px;
+  --panel-w:  390px;   --hdr-h:   52px;   --bottom-nav-h: 60px;
 }
 [data-theme="light"] {
   --bg:#f1f5f9; --surf:#fff; --surf2:#f8fafc;
@@ -335,7 +335,9 @@ select.pf-input option{background:var(--surf)}
 .sub-chk{width:15px;height:15px;border-radius:3px;border:2px solid var(--border2);background:transparent;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
 .sub-chk.done{background:var(--success);border-color:var(--success)}
 .sub-chk.done::after{content:'✓';color:#fff;font-size:.52rem;font-weight:800}
-.sub-item-ttl{flex:1;font-size:.78rem;color:var(--txt)}
+.sub-item-ttl{flex:1;font-size:.78rem;color:var(--txt);font-family:inherit;background:transparent;border:1px solid transparent;border-radius:4px;padding:2px 4px;margin:-2px -4px;min-width:0;transition:border-color .15s,background .15s}
+.sub-item-ttl:hover{border-color:var(--border2)}
+.sub-item-ttl:focus{outline:none;border-color:var(--accent);background:var(--bg)}
 .sub-item-ttl.done{text-decoration:line-through;opacity:.45}
 .sub-del{background:none;border:none;color:var(--txt3);font-size:.8rem;padding:0 2px;line-height:1}
 .sub-del:hover{color:#f87171}
@@ -782,6 +784,9 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .ns-search:focus{border-color:var(--accent)}
 .ns-new-btn{background:var(--accent);border:none;color:#fff;width:26px;height:26px;border-radius:7px;font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;transition:all .15s}
 .ns-new-btn:hover{background:var(--accent-h)}
+.ns-lock-btn{background:transparent;border:1px solid var(--border);color:var(--txt3);width:26px;height:26px;border-radius:7px;font-size:.8rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.ns-lock-btn:hover{border-color:var(--accent);color:var(--txt)}
+.ns-lock-btn.is-unlocked{border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.1)}
 .notes-editor{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
 .ne-topbar{display:flex;align-items:center;gap:5px;padding:7px 14px;background:var(--surf);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
 .ne-colors{display:flex;gap:4px;align-items:center}
@@ -797,19 +802,42 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .ne-title{width:100%;background:transparent;border:none;border-bottom:1px solid transparent;color:var(--txt);font-size:1.35rem;font-weight:800;padding:14px 18px 10px;outline:none;font-family:inherit;transition:border-color .15s;flex-shrink:0}
 .ne-title:focus{border-bottom-color:var(--accent)}
 .ne-title::placeholder{color:var(--txt3)}
-.ne-toolbar{display:flex;align-items:center;gap:2px;padding:5px 14px;background:var(--surf);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
+.ne-toolbar{position:relative;display:flex;align-items:center;gap:2px;padding:5px 14px;background:var(--surf);border-bottom:1px solid var(--border);flex-wrap:wrap;flex-shrink:0}
 .ne-t{background:transparent;border:1px solid transparent;color:var(--txt2);padding:3px 7px;border-radius:5px;font-size:.75rem;cursor:pointer;transition:all .12s;font-family:inherit;line-height:1.4}
 .ne-t:hover{background:var(--surf2);border-color:var(--border);color:var(--txt)}
 .ne-t.active{background:rgba(59,130,246,.12);border-color:var(--accent);color:#60a5fa}
 .ne-tsep{width:1px;height:16px;background:var(--border2);margin:0 3px;flex-shrink:0}
+.ne-hl-menu{position:absolute;top:100%;left:14px;margin-top:4px;display:flex;gap:6px;align-items:center;background:var(--surf);border:1px solid var(--border);border-radius:8px;padding:6px 8px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:20}
+.ne-hl-menu.hidden{display:none}
+.ne-hl-swatch{width:18px;height:18px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:all .15s;flex-shrink:0;padding:0}
+.ne-hl-swatch:hover{transform:scale(1.15);border-color:var(--border2)}
+.ne-hl-none{background:var(--surf2)!important;border:1px solid var(--border)!important;display:flex;align-items:center;justify-content:center;font-size:.6rem;color:var(--txt3);line-height:1}
+.ne-body-wrap{position:relative;flex:1;display:flex;flex-direction:column;min-height:0}
 .ne-body{flex:1;overflow-y:auto;padding:14px 18px 40px;color:var(--txt);font-size:.9rem;line-height:1.7;outline:none;font-family:inherit;min-height:0}
 .ne-body:empty::before{content:attr(data-ph);color:var(--txt3);pointer-events:none}
+.ne-nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;z-index:15;cursor:pointer;
+  background:color-mix(in srgb,var(--surf) 78%,transparent);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  border:1px solid var(--border);color:var(--txt2);box-shadow:0 4px 14px rgba(0,0,0,.14);
+  transition:transform .18s cubic-bezier(.4,0,.2,1),background .18s,border-color .18s,color .18s,box-shadow .18s,opacity .18s}
+.ne-nav-btn svg{width:17px;height:17px}
+.ne-nav-btn:hover:not(.disabled){background:var(--accent);border-color:var(--accent);color:#fff;
+  transform:translateY(-50%) scale(1.14);box-shadow:0 6px 18px rgba(59,130,246,.4)}
+.ne-nav-btn:active:not(.disabled){transform:translateY(-50%) scale(.96)}
+.ne-nav-btn.disabled{opacity:.2;cursor:default;box-shadow:none}
+.ne-nav-prev{left:12px}
+.ne-nav-next{right:12px}
+.notes-layout.focus-mode .ne-nav-btn{width:46px;height:46px}
+.notes-layout.focus-mode .ne-nav-btn svg{width:20px;height:20px}
+.notes-layout.focus-mode .ne-nav-prev{left:22px}
+.notes-layout.focus-mode .ne-nav-next{right:22px}
 .ne-body h1{font-size:1.5rem;font-weight:800;margin:.6em 0 .3em}
 .ne-body h2{font-size:1.2rem;font-weight:700;margin:.55em 0 .25em}
 .ne-body h3{font-size:1rem;font-weight:700;margin:.5em 0 .2em;color:var(--txt2)}
 .ne-body ul,.ne-body ol{padding-left:1.4em;margin:.3em 0}
 .ne-body li{margin:.15em 0}
 .ne-body code{background:var(--surf2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:.83em;font-family:monospace}
+.ne-body pre code{background:none;border:none;padding:0;border-radius:0;font-size:inherit}
 .ne-body blockquote{border-left:3px solid var(--accent);padding-left:12px;margin:8px 0;color:var(--txt2);font-style:italic}
 .ne-body hr{border:none;border-top:1px solid var(--border);margin:12px 0}
 .ne-body a{color:var(--accent);text-decoration:underline}
@@ -828,6 +856,19 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .ne-empty-cta{background:var(--accent);border:none;color:#fff;padding:8px 18px;border-radius:8px;font-size:.8rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
 .ne-empty-cta:hover{background:var(--accent-h)}
 .ne-copy-btn:hover{color:var(--accent)}
+
+/* ── Note lock (per-page password protection) ────────────────────────────────── */
+.ne-icon-btn.ne-lock-on{border-color:#f59e0b;color:#f59e0b;background:rgba(245,158,11,.1)}
+.ne-lock-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;gap:6px;text-align:center;padding:40px}
+.ne-lock-icon{font-size:2.6rem;opacity:.5;margin-bottom:4px}
+.ne-lock-title{font-size:1rem;font-weight:700;color:var(--txt);max-width:380px}
+.ne-lock-sub{font-size:.8rem;color:var(--txt3);max-width:300px;line-height:1.5;margin-bottom:10px}
+.ne-lock-form{display:flex;gap:8px;align-items:center}
+.ne-lock-input{background:var(--surf);border:1px solid var(--border);border-radius:8px;color:var(--txt);padding:8px 12px;font-size:.85rem;outline:none;font-family:inherit;width:220px}
+.ne-lock-input:focus{border-color:var(--accent)}
+.ne-lock-btn{background:var(--accent);border:none;color:#fff;padding:8px 18px;border-radius:8px;font-size:.82rem;font-weight:600;cursor:pointer;transition:all .15s;font-family:inherit}
+.ne-lock-btn:hover{background:var(--accent-h)}
+.ne-lock-err{color:#f87171;font-size:.78rem;min-height:1.1em;margin-top:10px}
 
 /* ── Note reading mode ───────────────────────────────────────────────────────── */
 .ne-read-btn{background:transparent;border:1px solid var(--border);color:var(--txt2);padding:4px 10px;border-radius:6px;font-size:.72rem;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
@@ -885,6 +926,15 @@ input[type="datetime-local"].m-input{color-scheme:dark}
 .nx-def-term{font-weight:700;font-size:.82rem;color:var(--txt);white-space:nowrap}
 .nx-def-text{font-size:.8rem;color:var(--txt2);line-height:1.5}
 .nx-code{display:block;background:#0d1117;color:#c9d1d9;border:1px solid var(--border2);border-radius:8px;padding:10px 14px;margin:10px 18px;font-family:monospace;font-size:.8rem;line-height:1.6;overflow-x:auto;white-space:pre}
+.nx-code.is-hl{padding:0;overflow:hidden}
+.nx-code-head{display:flex;align-items:center;justify-content:space-between;padding:6px 12px;background:#161b22;border-bottom:1px solid #30363d}
+.nx-code-lang{font-size:.65rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#8b949e;font-family:inherit}
+.nx-code-copy{background:transparent;border:1px solid #30363d;color:#8b949e;border-radius:5px;padding:2px 9px;font-size:.68rem;cursor:pointer;transition:all .15s;font-family:inherit;line-height:1.5}
+.nx-code-copy:hover{border-color:#58a6ff;color:#58a6ff;background:rgba(88,166,255,.1)}
+.nx-code-body{display:flex;overflow-x:auto}
+.nx-code-gutter{flex-shrink:0;padding:10px 10px 10px 14px;color:#484f58;text-align:right;white-space:pre;user-select:none;border-right:1px solid #30363d;font-family:monospace;font-size:.8rem;line-height:1.6}
+.nx-code.is-hl code{padding:10px 14px;white-space:pre;font-family:monospace;font-size:.8rem;line-height:1.6;flex:1}
+.nx-code.is-hl code.hljs{background:transparent}
 .nx-callout{margin:10px 18px;padding:9px 12px;border-radius:8px;font-size:.82rem;line-height:1.5}
 .nx-callout.good{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.35);color:var(--txt)}
 .nx-callout.good::before{content:"✓ ";font-weight:800;color:var(--nx-green)}
@@ -972,6 +1022,7 @@ header{box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,.04)}
 .nb-pg-item.active .nb-pg-dot{background:var(--accent)}
 .nb-pg-title{flex:1;font-size:.73rem;color:var(--txt3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
 .nb-pg-item.active .nb-pg-title{color:var(--txt);font-weight:600}
+.nb-pg-lock{flex-shrink:0;font-size:.65rem;opacity:.6}
 .nb-pg-acts{display:flex;gap:2px;opacity:0;flex-shrink:0;transition:opacity .12s}
 .nb-pg-item:hover .nb-pg-acts{opacity:1}
 
@@ -1103,7 +1154,201 @@ body.sidebar-open #main-wrap{margin-right:252px}
 .dep-add-row{display:flex;gap:6px;margin-top:4px}
 .dep-empty{font-size:.72rem;color:var(--txt3);font-style:italic;margin-bottom:4px}
 
+/* ══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVE
+   Desktop-first: everything below is additive overrides layered on top of
+   the rules above, nothing above this point is modified. Two breakpoints —
+   768px (phone/tablet reflow) and 480px (further phone-specific tightening).
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Overflow safety net ──────────────────────────────────────────────────
+   This app's pre-existing desktop CSS has flex/grid children (e.g. .dash-panel
+   inside the 1fr .dash-panels grid) that never needed to shrink below their
+   content's natural width before. Flex/grid items default to min-width:auto,
+   so on a narrow phone that content can force the item wider than its track —
+   and because mobile browsers expand the whole layout viewport to fit any
+   overflowing content (per the width=device-width viewport meta tag), a single
+   such element can silently blow out every vw-relative and edge-anchored
+   fixed-position calculation on the page. Capping horizontal overflow at the
+   body level, plus resetting the min-width floor on the specific grid/flex
+   containers below, addresses both the symptom and the underlying cause. */
+@media (max-width:768px){
+  html,body{overflow-x:hidden}
+  .dash-panel,.stat-card,.dash-panels>*,.stat-grid>*{min-width:0}
+}
+
+/* ── Touch ergonomics (global, all sizes) ────────────────────────────────── */
+button,select,a,.nb-pg-item,.task-card{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+@media (hover:none){
+  button:active,.hdr-btn:active,.filter-btn:active,.type-btn:active,.smart-btn:active{opacity:.65}
+  /* Task-card action icons (pomodoro/bell/delete) are otherwise only revealed on
+     :hover, which doesn't exist on touch -- they'd be permanently unreachable. */
+  .task-actions{opacity:1;pointer-events:all}
+}
+@media (prefers-reduced-motion:reduce){
+  #bottom-nav,.bnav-btn,.notes-sidebar,.nb-drawer-backdrop,#daily-sidebar,
+  .overlay,.overlay .modal,.shortcut-box,.meeting-modal,.calday-box,.alert-box,
+  #more-dropdown,#detail-panel{transition:none!important;animation:none!important}
+}
+
+/* ── Bottom tab bar (mobile primary nav: Tasks / Workflows / Notes / More) ── */
+#bottom-nav{display:none}
+.more-backdrop{display:none}
+@media (max-width:768px){
+  #bottom-nav{
+    display:flex; position:fixed; left:0; right:0; bottom:0; z-index:250;
+    background:var(--surf); border-top:1px solid var(--border);
+    padding:4px 4px calc(4px + env(safe-area-inset-bottom)); gap:2px;
+    overflow:hidden; /* safety net: buttons must shrink to fit, never push the bar wider than the viewport */
+  }
+  .bnav-btn{
+    flex:1; min-width:0; /* override flexbox's default min-width:auto so labels can shrink/ellipsize
+                             instead of forcing the bar (and, via mobile viewport-expansion, everything
+                             else on the page) wider than the screen */
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px; background:transparent; border:none; color:var(--txt3);
+    padding:6px 2px; border-radius:10px; font-size:.62rem; font-weight:600;
+    min-height:50px; transition:color .15s,background .15s; font-family:inherit;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .bnav-icon{font-size:1.2rem; line-height:1}
+  .bnav-btn.active{color:var(--accent); background:rgba(59,130,246,.1)}
+  body{padding-bottom:calc(var(--bottom-nav-h) + env(safe-area-inset-bottom))}
+
+  /* Just under header's mobile z-index (260, see Header reflow section below)
+     so header -- and #more-dropdown trapped inside its stacking context --
+     still renders on top, while still dimming other overlays like the notes/
+     daily drawer (210) and the bottom nav (250) that might already be open. */
+  body:has(#more-dropdown.open) .more-backdrop{
+    display:block; position:fixed; inset:0; z-index:255; background:rgba(0,0,0,.5);
+  }
+}
+
+/* ── Header reflow ────────────────────────────────────────────────────────── */
+@media (max-width:768px){
+  /* Header wraps to 2 rows on mobile (view-tabs strip drops to its own line),
+     so it's taller than the desktop --hdr-h constant. Everything that
+     positions itself "below the header" (detail panel, notes sidebar/backdrop,
+     daily sidebar) reads --hdr-h, so overriding it here keeps them all in
+     sync automatically instead of hardcoding the offset in N different places. */
+  :root{--hdr-h:134px}
+  /* #more-dropdown lives inside <header>, so it's trapped in header's stacking
+     context -- it can never out-rank a sibling-of-header overlay (notes/daily
+     drawer at 210, bottom-nav at 250) no matter its own z-index. Raising
+     header itself above all of those (but still under real modals/panels,
+     which are 300+) lets the more-sheet correctly sit on top regardless of
+     what else is open. */
+  header{z-index:260}
+  .view-tab-primary,.nav-divider,#more-btn{display:none}
+  .view-tabs{
+    order:3; flex-basis:100%; width:100%; max-width:100%;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; flex-wrap:nowrap;
+  }
+  .view-tabs::-webkit-scrollbar{display:none}
+  .search-wrap{flex:1 1 auto; min-width:0; max-width:none}
+  .hdr-sel{max-width:96px}
+}
+
+/* ── Modals → bottom sheets ───────────────────────────────────────────────── */
+@media (max-width:640px){
+  .overlay,#alert-overlay,#shortcut-overlay,#meeting-overlay,#calday-overlay{
+    align-items:flex-end;
+  }
+  .modal,.alert-box,.shortcut-box,.meeting-modal,.calday-box{
+    width:100%; max-width:100%; margin:0;
+    border-radius:16px 16px 0 0;
+    max-height:88dvh;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  #more-dropdown{
+    position:fixed; left:0; right:0; bottom:0; top:auto;
+    border-radius:16px 16px 0 0; z-index:245; min-width:0;
+    padding:8px 8px calc(8px + env(safe-area-inset-bottom));
+    max-height:70dvh; overflow-y:auto;
+  }
+  .more-item{padding:11px 12px; font-size:.85rem}
+}
+
+/* ── Notes sidebar → off-canvas drawer ───────────────────────────────────── */
+.ns-hamburger-btn{display:none}
+.nb-drawer-backdrop{display:none}
+@media (max-width:768px){
+  #view-notes{height:calc(100dvh - var(--hdr-h) - var(--bottom-nav-h))}
+  .notes-layout{position:relative}
+  .notes-sidebar{
+    position:fixed; top:var(--hdr-h); bottom:0; left:0; z-index:210;
+    width:85vw; max-width:320px;
+    transform:translateX(-100%); transition:transform .22s ease;
+    box-shadow:4px 0 24px rgba(0,0,0,.35);
+  }
+  .notes-sidebar.open{transform:translateX(0)}
+  .ns-hamburger-btn{
+    display:flex; align-items:center; justify-content:center;
+    position:absolute; top:10px; left:10px; z-index:215;
+    width:36px; height:36px; flex-shrink:0;
+    background:color-mix(in srgb,var(--surf) 85%,transparent); backdrop-filter:blur(6px);
+    border:1px solid var(--border); color:var(--txt2); border-radius:8px; font-size:1.05rem;
+    box-shadow:0 2px 10px rgba(0,0,0,.25);
+  }
+  .nb-drawer-backdrop.open{
+    display:block; position:fixed; top:var(--hdr-h); left:0; right:0; bottom:0;
+    z-index:205; background:rgba(0,0,0,.5);
+  }
+}
+
+/* ── Daily sidebar → overlay instead of pushing content ──────────────────── */
+@media (max-width:768px){
+  #daily-sidebar{width:85vw; max-width:320px; z-index:210; top:var(--hdr-h); height:calc(100dvh - var(--hdr-h))}
+  /* Desktop's .hidden state translates by a fixed 260px, sized for the 252px
+     desktop width -- not enough to fully hide the wider (up to 320px) mobile
+     version, leaving a sliver on-screen (and clickable) even when "hidden".
+     100% is relative to the element's own width, so it's correct at any size. */
+  #daily-sidebar.hidden{transform:translateX(100%)}
+  body.sidebar-open #main-wrap{margin-right:0}
+}
+
+/* ── Detail panel: full-width on phones ───────────────────────────────────── */
+@media (max-width:768px){
+  #detail-panel{width:100vw; max-width:100vw}
+  #main-wrap.panel-open{padding-right:0}
+}
+
+/* ── Kanban / task-page board & flow: swipe-one-column scroll-snap ───────── */
+@media (max-width:768px){
+  #view-kanban,.tp-track{scroll-snap-type:x mandatory; overscroll-behavior-x:contain}
+  .kanban-col,.tp-col,.flow-node{scroll-snap-align:start}
+}
+@media (max-width:480px){
+  .kanban-col{width:86vw; min-width:260px}
+  .tp-col{width:86vw; min-width:260px}
+  .flow-node{width:82vw; min-width:220px}
+}
+
+/* ── Calendar grid tightening ─────────────────────────────────────────────── */
+@media (max-width:480px){
+  .cal-grid{gap:3px}
+  .cal-day{padding:3px; min-height:52px; border-radius:6px; font-size:.72rem}
+}
+
+/* ── Touch targets: bump undersized controls toward ~40-44px hit areas ───── */
+@media (max-width:768px){
+  .ns-new-btn,.ns-lock-btn,.panel-close,.cal-nav{width:38px; height:38px}
+  .nb-pg-act-btn,.nb-ch-act-btn,.nb-book-act-btn{padding:7px 9px; font-size:.8rem}
+  .act-btn{padding:7px 10px; font-size:.75rem}
+  .rem-edit-btn,.rem-del-btn{padding:8px 12px; font-size:.78rem}
+  .filter-btn,.type-btn{padding:7px 13px; font-size:.78rem}
+  .smart-btn{padding:8px 16px; font-size:.78rem}
+  .hdr-btn{padding:9px 13px; font-size:.8rem}
+  .quick-check{width:22px; height:22px}
+  .bulk-check{width:18px; height:18px}
+  /* opacity/pointer-events reveal already handled by the touch-actions rule above;
+     this only widens the hit area so icon-only buttons meet ~40px+ on a phone. */
+  .task-actions{gap:5px}
+}
+
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 
 <!-- React is being introduced incrementally, view by view. Views not yet
@@ -1155,6 +1400,15 @@ body.sidebar-open #main-wrap{margin-right:252px}
     </div>
   </div>
 </header>
+
+<!-- ── Bottom tab bar (mobile only — desktop keeps the header's view-tabs) ─── -->
+<nav id="bottom-nav">
+  <button class="bnav-btn" data-v="tasks" onclick="goToTasks()"><span class="bnav-icon">📋</span>Tasks</button>
+  <button class="bnav-btn" data-v="workflows" onclick="switchView('workflows')"><span class="bnav-icon">⚡</span>Workflows</button>
+  <button class="bnav-btn" data-v="notes" onclick="switchView('notes')"><span class="bnav-icon">📓</span>Notes</button>
+  <button class="bnav-btn" id="bnav-more-btn" onclick="toggleMoreMenu()"><span class="bnav-icon">⋯</span>More</button>
+</nav>
+<div class="more-backdrop" id="more-backdrop" onclick="closeMoreMenu()"></div>
 
 <div id="toast-wrap"></div>
 
@@ -1667,6 +1921,30 @@ body.sidebar-open #main-wrap{margin-right:252px}
   </div>
 </div>
 
+<!-- ── Notes password setup modal ──────────────────────────────────────────── -->
+<div class="overlay" id="notes-pw-overlay" onclick="handleNotesPwOverlay(event)">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-head"><h2>🔒 Set Notes Password</h2></div>
+    <div class="modal-body">
+      <p style="color:var(--txt3);font-size:.8rem;line-height:1.5;margin:0 0 14px">
+        One password protects any notes you choose to lock. It's stored as a salted hash, not
+        plain text — to change or reset it later, use <code>scripts/notes_password.py</code>.
+      </p>
+      <label>Password</label>
+      <input type="password" id="npw-pass" class="m-input" placeholder="At least 4 characters" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')saveNotesPwSetup()"/>
+      <label>Confirm password</label>
+      <input type="password" id="npw-confirm" class="m-input" placeholder="Re-enter password" autocomplete="new-password"
+        onkeydown="if(event.key==='Enter')saveNotesPwSetup()"/>
+      <div class="ne-lock-err" id="npw-err" style="margin-top:4px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-cancel" onclick="closeNotesPwModal()">Cancel</button>
+      <button class="btn-save" onclick="saveNotesPwSetup()">Set Password</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════════════════════════ JavaScript ═══ -->
 <script>
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -1708,7 +1986,7 @@ let tpCollapsedSteps=new Set();
   }
   const v=localStorage.getItem('view')||'list';
   const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth();
-  await Promise.all([loadAll(), loadNotesFromBackend(), window.TFReactReady]); // loadAll also calls loadStandaloneReminders
+  await Promise.all([loadAll(), loadNotesFromBackend(), loadNotesLockStatus(), window.TFReactReady]); // loadAll also calls loadStandaloneReminders
   switchView(v,false);
   const savedTaskPageId=parseInt(localStorage.getItem('task_page_id'));
   if(savedTaskPageId&&allTasks.some(t=>t.id===savedTaskPageId)) await openTaskPage(savedTaskPageId);
@@ -1808,6 +2086,9 @@ function switchView(v,save=true){
   document.querySelectorAll('.view-tab-primary').forEach(b=>{
     b.classList.toggle('active', b.dataset.v===v || (b.dataset.v==='tasks'&&isTask));
   });
+  document.querySelectorAll('.bnav-btn[data-v]').forEach(b=>{
+    b.classList.toggle('active', b.dataset.v===v || (b.dataset.v==='tasks'&&isTask));
+  });
   // Secondary tabs always visible — update active state only (no show/hide)
   const subActive=['today','next7','list'].includes(v)?'list':v;
   document.querySelectorAll('.view-tab').forEach(b=>b.classList.toggle('active',b.dataset.v===subActive));
@@ -1843,7 +2124,7 @@ function switchView(v,save=true){
   if(v==='next7')     renderNext7();
   if(v==='reminders')  renderReminders();
   if(v==='workflows')  renderWorkflows();
-  if(v==='notes')      renderNotes();
+  if(v==='notes'){     renderNotes(); refreshNotesLockOnEnter(); }
   updateProgressStrip();
 }
 
@@ -2442,7 +2723,8 @@ async function loadSubtasks(){
   document.getElementById('p-sub-list').innerHTML=subs.map(s=>`
     <div class="sub-item" id="si-${s.id}">
       <div class="sub-chk ${s.is_done?'done':''}" onclick="toggleSub(${s.id},${s.is_done?0:1})"></div>
-      <span class="sub-item-ttl ${s.is_done?'done':''}">${esc(s.title)}</span>
+      <input type="text" class="sub-item-ttl ${s.is_done?'done':''}" value="${esc(s.title)}"
+        onchange="renameSubtask(${s.id},this.value)" onkeydown="if(event.key==='Enter')this.blur()"/>
       <button class="sub-del" onclick="delSub(${s.id})">×</button>
     </div>`).join('');
 }
@@ -2455,6 +2737,12 @@ async function addSubtask(){
 }
 async function toggleSub(id,isDone){await fetch(`/subtasks/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({is_done:isDone})});loadSubtasks();loadAll();}
 async function delSub(id){await fetch(`/subtasks/${id}`,{method:'DELETE'});loadSubtasks();loadAll();}
+async function renameSubtask(id,title){
+  title=title.trim();
+  if(!title)return;
+  await fetch(`/subtasks/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({title})});
+  loadAll();
+}
 
 // ── Time tracking ─────────────────────────────────────────────────────────────
 async function loadTimeTab(){
@@ -2867,7 +3155,7 @@ function fmtTime12(t){if(!t)return'';const[h,m]=t.split(':');const hh=+h;return`
 function fmtDur(s,pad=false){s=s||0;if(!s&&!pad)return'0m';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;if(pad)return`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;return h?`${h}h ${m}m`:`${m}m`;}
 function fmtMin(m){if(!m)return'';return m<60?`${m}m`:m%60===0?`${m/60}h`:`${Math.floor(m/60)}h${m%60}m`;}
 function capFirst(s){return s?s[0].toUpperCase()+s.slice(1):'';}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 
 // ── Pomodoro timer (Today view, no data saved) ────────────────────────────────
 const pomos={};  // taskId → { total, remaining, running, interval }
@@ -3501,7 +3789,8 @@ function toggleMoreMenu(){document.getElementById('more-dropdown')?.classList.to
 function closeMoreMenu(){document.getElementById('more-dropdown')?.classList.remove('open');}
 document.addEventListener('click',e=>{
   const d=document.getElementById('more-dropdown');
-  if(d&&!d.classList.contains('hidden')&&!document.getElementById('more-btn')?.contains(e.target)&&!d.contains(e.target))
+  if(d&&!d.classList.contains('hidden')&&!document.getElementById('more-btn')?.contains(e.target)
+     &&!document.getElementById('bnav-more-btn')?.contains(e.target)&&!d.contains(e.target))
     closeMoreMenu();
 });
 
@@ -3509,6 +3798,10 @@ document.addEventListener('click',e=>{
 const NOTE_COLORS={
   default:'#475569',blue:'#3b82f6',green:'#22c55e',yellow:'#f59e0b',
   red:'#ef4444',purple:'#8b5cf6',pink:'#ec4899',teal:'#14b8a6'
+};
+const HIGHLIGHT_COLORS={
+  yellow:'rgba(250,204,21,.55)',green:'rgba(74,222,128,.45)',blue:'rgba(96,165,250,.45)',
+  pink:'rgba(244,114,182,.45)',purple:'rgba(192,132,252,.45)'
 };
 
 // ── Notes state ───────────────────────────────────────────────────────────────
@@ -3519,8 +3812,11 @@ let nbOpenBooks=new Set(JSON.parse(localStorage.getItem('nb_open_books')||'[]'))
 let nbOpenChapters=new Set(JSON.parse(localStorage.getItem('nb_open_chapters')||'[]'));
 let nbAddingChapter=null, nbAddingPage=null;
 let noteSaveTimer=null, noteSearchQ='';
+let savedNoteRange=null;
 let noteFocusMode=false;
 let noteReadMode=false;
+let notesPasswordSet=false, notesUnlocked=false;
+let notesPwSetupCallback=null;
 
 // ── Notes functions ───────────────────────────────────────────────────────────
 function onNoteKey(e){
@@ -3531,6 +3827,7 @@ function onNoteKey(e){
 function noteTbCmd(cmd){
   if(cmd==='h1'||cmd==='h2'||cmd==='h3'||cmd==='p'){document.execCommand('formatBlock',false,'<'+cmd+'>');}
   else if(cmd==='_code'){document.execCommand('insertHTML',false,'<code>code</code>');}
+  else if(cmd==='_codeblock'){document.execCommand('insertHTML',false,'<pre class="nx-code">your code here</pre><p><br></p>');}
   else if(cmd==='_quote'){document.execCommand('formatBlock',false,'<blockquote>');}
   else if(cmd==='_link'){const url=prompt('URL:');if(url)document.execCommand('createLink',false,url);}
   else{document.execCommand(cmd,false,null);}
@@ -3544,6 +3841,32 @@ function updateTbState(){
   });
 }
 
+// ── Highlight (multi-color) ───────────────────────────────────────────────────
+function toggleHlMenu(){
+  const sel=window.getSelection();
+  if(sel&&sel.rangeCount&&!sel.isCollapsed) savedNoteRange=sel.getRangeAt(0).cloneRange();
+  document.getElementById('ne-hl-menu')?.classList.toggle('hidden');
+}
+function applyNoteHighlight(color){
+  const menu=document.getElementById('ne-hl-menu');
+  menu?.classList.add('hidden');
+  if(!savedNoteRange)return;
+  const sel=window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(savedNoteRange);
+  savedNoteRange=null;
+  if(sel.isCollapsed)return;
+  document.execCommand('styleWithCSS',false,true);
+  const cmd=document.queryCommandSupported('hiliteColor')?'hiliteColor':'backColor';
+  document.execCommand(cmd,false,color||'transparent');
+  document.getElementById('ne-body')?.focus();
+}
+document.addEventListener('mousedown',e=>{
+  const menu=document.getElementById('ne-hl-menu');
+  if(menu&&!menu.classList.contains('hidden')&&!document.getElementById('ne-hl-btn')?.contains(e.target)&&!menu.contains(e.target))
+    menu.classList.add('hidden');
+});
+
 // ── Notes (3-level: Books › Chapters › Pages) ─────────────────────────────────
 
 async function loadNotesFromBackend(){
@@ -3551,6 +3874,13 @@ async function loadNotesFromBackend(){
   allBooks=await r.json();
   if(!allBooks.length) await migrateLocalNotesIfAny();
   notesLoaded=true;
+}
+
+async function loadNotesLockStatus(){
+  const r=await fetch('/notes/lock/status');
+  const s=await r.json();
+  notesPasswordSet=!!s.is_configured;
+  notesUnlocked=!!s.unlocked;
 }
 
 async function migrateLocalNotesIfAny(){
@@ -3613,13 +3943,17 @@ function renderNotes(){
   const el=document.getElementById('view-notes');
   if(!el)return;
   el.innerHTML=`<div class="notes-layout">
-    <div class="notes-sidebar">
+    <button class="ns-hamburger-btn" onclick="toggleNotesSidebar()" title="Notebooks">☰</button>
+    <div class="nb-drawer-backdrop" id="nb-drawer-backdrop" onclick="closeNotesSidebar()"></div>
+    <div class="notes-sidebar" id="notes-sidebar">
       <div class="ns-search-row">
         <div class="ns-search-wrap">
           <svg class="ns-search-icon" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
           <input class="ns-search" type="text" placeholder="Search all pages…" value="${esc(noteSearchQ)}" oninput="nbSearch(this.value)" id="nb-search-inp"/>
         </div>
         <button class="ns-new-btn" onclick="nbNewBook()" title="New notebook (creates Book layer)">+</button>
+        ${notesPasswordSet?`<button class="ns-lock-btn ${notesUnlocked?'is-unlocked':''}" id="ns-lock-btn"
+          onclick="relockNotes()" title="${notesUnlocked?'Lock notes now':'Notes are locked'}">${notesUnlocked?'🔓':'🔒'}</button>`:''}
       </div>
       <div class="nb-tree" id="nb-tree"></div>
     </div>
@@ -3628,6 +3962,106 @@ function renderNotes(){
   renderBookTree();
   const found=activePageId!=null?findPage(activePageId):null;
   renderNoteEditor(found?found.page:null,found);
+}
+
+function toggleNotesSidebar(){
+  document.getElementById('notes-sidebar')?.classList.toggle('open');
+  document.getElementById('nb-drawer-backdrop')?.classList.toggle('open');
+}
+function closeNotesSidebar(){
+  document.getElementById('notes-sidebar')?.classList.remove('open');
+  document.getElementById('nb-drawer-backdrop')?.classList.remove('open');
+}
+
+async function refreshNotesLockOnEnter(){
+  const prevUnlocked=notesUnlocked;
+  await loadNotesLockStatus();
+  if(notesUnlocked!==prevUnlocked){
+    await loadNotesFromBackend();
+    renderNotes();
+  }else{
+    const btn=document.getElementById('ns-lock-btn');
+    if(btn){btn.classList.toggle('is-unlocked',notesUnlocked);btn.title=notesUnlocked?'Lock notes now':'Notes are locked';btn.textContent=notesUnlocked?'🔓':'🔒';}
+  }
+}
+
+async function relockNotes(){
+  if(!notesUnlocked){showToast('Notes are already locked','info');return;}
+  await fetch('/notes/lock/relock',{method:'POST'});
+  notesUnlocked=false;
+  await loadNotesFromBackend();
+  renderNotes();
+  showToast('🔒 Notes locked');
+}
+
+function openSetupNotesPasswordModal(onSuccess){
+  notesPwSetupCallback=onSuccess||null;
+  document.getElementById('npw-pass').value='';
+  document.getElementById('npw-confirm').value='';
+  document.getElementById('npw-err').textContent='';
+  document.getElementById('notes-pw-overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('npw-pass')?.focus(),40);
+}
+function closeNotesPwModal(){
+  document.getElementById('notes-pw-overlay').classList.remove('open');
+  notesPwSetupCallback=null;
+}
+function handleNotesPwOverlay(e){
+  if(e.target===document.getElementById('notes-pw-overlay')) closeNotesPwModal();
+}
+async function saveNotesPwSetup(){
+  const p1=document.getElementById('npw-pass').value, p2=document.getElementById('npw-confirm').value;
+  const err=document.getElementById('npw-err');
+  if(p1.length<4){err.textContent='Password must be at least 4 characters';return;}
+  if(p1!==p2){err.textContent='Passwords do not match';return;}
+  const r=await fetch('/notes/lock/setup',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:p1})});
+  if(!r.ok){const d=await r.json().catch(()=>({}));err.textContent=d.error||'Could not set password';return;}
+  notesPasswordSet=true; notesUnlocked=true;
+  const cb=notesPwSetupCallback; notesPwSetupCallback=null;
+  closeNotesPwModal();
+  showToast('🔒 Notes password set');
+  if(cb) await cb();
+  renderNotes();
+}
+
+async function submitNotesUnlock(e){
+  e.preventDefault();
+  const inp=document.getElementById('ne-lock-pw');
+  const errEl=document.getElementById('ne-lock-err');
+  const pw=inp?.value||'';
+  const r=await fetch('/notes/lock/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw})});
+  if(r.ok){
+    notesUnlocked=true;
+    await loadNotesFromBackend();
+    renderNotes();
+    showToast('🔓 Notes unlocked');
+  }else{
+    if(errEl) errEl.textContent='Incorrect password';
+    if(inp){inp.value='';inp.focus();}
+  }
+  return false;
+}
+
+async function toggleCurrentPageLock(){
+  const found=findPage(activePageId);if(!found)return;
+  const {page}=found;
+  if(!notesPasswordSet){
+    openSetupNotesPasswordModal(()=>toggleCurrentPageLock());
+    return;
+  }
+  if(!notesUnlocked){
+    showToast('Unlock notes first','info');
+    return;
+  }
+  const wantLock=!page.is_locked;
+  const r=await fetch(`/notes/pages/${page.id}/lock`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({locked:wantLock})});
+  if(!r.ok){showToast('Could not update lock','error');return;}
+  const updated=await r.json();
+  page.is_locked=updated.is_locked;
+  renderBookTree();
+  const f2=findPage(activePageId);
+  renderNoteEditor(f2?f2.page:null,f2);
+  showToast(wantLock?'🔒 Note locked':'🔓 Note unlocked');
 }
 
 // ── Book tree renderer ────────────────────────────────────────────────────────
@@ -3660,6 +4094,7 @@ function nbOpenPage(bid,cid,pid){
   renderBookTree();
   const found=findPage(pid);
   renderNoteEditor(found?found.page:null,found);
+  if(window.innerWidth<=768) closeNotesSidebar();
   setTimeout(()=>{const b=document.getElementById('ne-body');if(b){b.focus();placeCaretAtEnd(b);}},40);
 }
 
@@ -3757,7 +4192,8 @@ async function nbDeletePage(bid,cid,pid){
   const b=allBooks.find(b=>b.id===bid);if(!b)return;
   const c=b.chapters.find(c=>c.id===cid);if(!c)return;
   if(!confirm('Delete this page?'))return;
-  await fetch(`/notes/pages/${pid}`,{method:'DELETE'});
+  const r=await fetch(`/notes/pages/${pid}`,{method:'DELETE'});
+  if(r.status===401){showToast('🔒 This note is locked — unlock notes to delete it','error');return;}
   c.pages=c.pages.filter(p=>p.id!==pid);
   if(activePageId===pid) activePageId=c.pages.length?c.pages[0].id:null;
   renderBookTree();
@@ -3785,6 +4221,21 @@ function renderNoteEditor(page,ctx){
     <span class="nb-bc-sep">›</span>
     <span class="nb-bc-item" id="nb-bc-page">📄 ${esc(page.title||'Untitled')}</span>
   </div>`:'';
+  if(page.is_locked&&!notesUnlocked){
+    el.innerHTML=`${breadcrumb}
+      <div class="ne-lock-gate">
+        <div class="ne-lock-icon">🔒</div>
+        <div class="ne-lock-title">"${esc(page.title||'Untitled')}" is password protected</div>
+        <div class="ne-lock-sub">Enter the notes password to view and edit this page.</div>
+        <form class="ne-lock-form" onsubmit="return submitNotesUnlock(event)">
+          <input type="password" id="ne-lock-pw" class="ne-lock-input" placeholder="Password" autocomplete="current-password"/>
+          <button type="submit" class="ne-lock-btn">Unlock</button>
+        </form>
+        <div class="ne-lock-err" id="ne-lock-err"></div>
+      </div>`;
+    setTimeout(()=>document.getElementById('ne-lock-pw')?.focus(),40);
+    return;
+  }
   const dots=Object.entries(NOTE_COLORS).map(([k,col])=>`
     <button class="ne-cdot ${(page.color||'default')===k?'nc-sel':''}" style="background:${col};--dc:${col}"
       title="${k[0].toUpperCase()+k.slice(1)}" onclick="setPageColor('${k}')"></button>`).join('');
@@ -3792,22 +4243,37 @@ function renderNoteEditor(page,ctx){
     {c:'bold',i:'<b>B</b>',t:'Bold (Ctrl+B)'},{c:'italic',i:'<i>I</i>',t:'Italic (Ctrl+I)'},
     {c:'underline',i:'<u>U</u>',t:'Underline (Ctrl+U)'},{c:'strikeThrough',i:'<s>S</s>',t:'Strikethrough'},
     {sep:1},
+    {c:'_hl',i:'🖍',t:'Highlight'},
+    {sep:1},
     {c:'h1',i:'H1',t:'Heading 1'},{c:'h2',i:'H2',t:'Heading 2'},{c:'h3',i:'H3',t:'Heading 3'},{c:'p',i:'¶',t:'Paragraph'},
     {sep:1},
     {c:'insertUnorderedList',i:'•≡',t:'Bullet list'},{c:'insertOrderedList',i:'1≡',t:'Numbered list'},
     {sep:1},
-    {c:'_code',i:'&lt;/&gt;',t:'Inline code'},{c:'_quote',i:'❝',t:'Blockquote'},
+    {c:'_code',i:'&lt;/&gt;',t:'Inline code'},{c:'_codeblock',i:'{ }',t:'Code block'},{c:'_quote',i:'❝',t:'Blockquote'},
     {c:'insertHorizontalRule',i:'—',t:'Horizontal rule'},{sep:1},{c:'_link',i:'🔗',t:'Insert link'},
   ].map(b=>{
     if(b.sep)return'<span class="ne-tsep"></span>';
+    if(b.c==='_hl')return`<button class="ne-t" id="ne-hl-btn" title="${b.t}" onclick="toggleHlMenu()">${b.i}</button>`;
     return`<button class="ne-t" title="${b.t}" data-ncmd="${b.c}" onclick="noteTbCmd('${b.c}')">${b.i}</button>`;
   }).join('');
+  const hlSwatches=Object.entries(HIGHLIGHT_COLORS).map(([k,col])=>
+    `<button class="ne-hl-swatch" style="background:${col}" title="${k[0].toUpperCase()+k.slice(1)}" onclick="applyNoteHighlight('${col}')"></button>`).join('')
+    +`<button class="ne-hl-swatch ne-hl-none" title="Remove highlight" onclick="applyNoteHighlight(null)">✕</button>`;
   const wc=noteWordCount(page.body||''),cc=noteCharCount(page.body||'');
+  const flatPages=allPagesFlat(),pgIdx=flatPages.findIndex(x=>x.page.id===page.id);
+  const prevT=pgIdx>0?flatPages[pgIdx-1]:null,nextT=(pgIdx>-1&&pgIdx<flatPages.length-1)?flatPages[pgIdx+1]:null;
+  const chevron='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="__PTS__"/></svg>';
+  const navPrev=`<button class="ne-nav-btn ne-nav-prev${prevT?'':' disabled'}" ${prevT?`onclick="nbOpenPage(${prevT.book.id},${prevT.chapter.id},${prevT.page.id})"`:'disabled'}
+      title="${prevT?'Previous: '+esc(prevT.page.title||'Untitled'):'No previous page'}">${chevron.replace('__PTS__','15 18 9 12 15 6')}</button>`;
+  const navNext=`<button class="ne-nav-btn ne-nav-next${nextT?'':' disabled'}" ${nextT?`onclick="nbOpenPage(${nextT.book.id},${nextT.chapter.id},${nextT.page.id})"`:'disabled'}
+      title="${nextT?'Next: '+esc(nextT.page.title||'Untitled'):'No next page'}">${chevron.replace('__PTS__','9 18 15 12 9 6')}</button>`;
   el.innerHTML=`${breadcrumb}
     <div class="ne-topbar" style="border-top:3px solid ${NOTE_COLORS[page.color||'default']||NOTE_COLORS.default}">
       <div class="ne-colors">${dots}</div>
       <button class="ne-icon-btn" onclick="duplicatePage(${page.id})" title="Duplicate page">⧉</button>
       <button class="ne-icon-btn" onclick="exportPage(${page.id})" title="Export as .txt">⬇</button>
+      <button class="ne-icon-btn ${page.is_locked?'ne-lock-on':''}" onclick="toggleCurrentPageLock()"
+        title="${page.is_locked?'Remove password protection':'Password-protect this note'}">${page.is_locked?'🔒':'🔓'}</button>
       <button class="ne-read-btn ${noteReadMode?'is-read':''}" onclick="toggleNoteReadMode()" title="Reading mode">
         ${noteReadMode?'✏ Edit':'📖 Read'}
       </button>
@@ -3818,10 +4284,14 @@ function renderNoteEditor(page,ctx){
     </div>
     <input class="ne-title" type="text" placeholder="Page title…" value="${esc(page.title||'')}"
       oninput="onNoteTitleChange(this.value)" id="ne-title"/>
-    <div class="ne-toolbar">${tb}</div>
-    <div class="ne-body" id="ne-body" contenteditable="true" data-ph="Start writing…"
-      onkeydown="onNoteKey(event)" oninput="onNoteBodyChange()" onkeyup="updateTbState()" onmouseup="updateTbState()"
-    >${page.body||''}</div>
+    <div class="ne-toolbar">${tb}<div class="ne-hl-menu hidden" id="ne-hl-menu">${hlSwatches}</div></div>
+    <div class="ne-body-wrap">
+      ${navPrev}
+      <div class="ne-body" id="ne-body" contenteditable="true" data-ph="Start writing…"
+        onkeydown="onNoteKey(event)" oninput="onNoteBodyChange()" onkeyup="updateTbState()" onmouseup="updateTbState()"
+      >${page.body||''}</div>
+      ${navNext}
+    </div>
     <div class="ne-foot">
       <span class="ne-stat" id="ne-wc">${wc} word${wc!==1?'s':''}</span>
       <span class="ne-stat">${cc} char${cc!==1?'s':''}</span>
@@ -3863,8 +4333,16 @@ async function commitNoteSave(){
   const tEl=document.getElementById('ne-title'),bEl=document.getElementById('ne-body');
   if(!tEl||!bEl)return;
   page.title=tEl.value; page.body=bEl.innerHTML;
-  await fetch(`/notes/pages/${page.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
+  const r=await fetch(`/notes/pages/${page.id}`,{method:'PUT',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({title:page.title,body:page.body})});
+  if(r.status===401){
+    showToast('🔒 Notes locked while editing — unlock to keep saving','error');
+    notesUnlocked=false;
+    await loadNotesFromBackend();
+    const f=findPage(activePageId);
+    renderNoteEditor(f?f.page:null,f);
+    return;
+  }
   setNoteSaveState('saved');
 }
 
@@ -3922,8 +4400,10 @@ function toggleNoteReadMode(){
   if(btn){btn.innerHTML=noteReadMode?'✏ Edit':'📖 Read';btn.classList.toggle('is-read',noteReadMode);}
   if(noteReadMode){
     renderNoteDiagrams();
+    renderNoteCode();
   }else{
     revertNoteDiagrams();
+    revertNoteCode();
     const b=document.getElementById('ne-body');
     if(b){b.focus();placeCaretAtEnd(b);}
   }
@@ -3969,6 +4449,59 @@ function revertNoteDiagrams(){
   });
 }
 
+// Code blocks are syntax-highlighted only while in Read Mode, same discipline as
+// diagrams above: the raw source/class/style are stashed on the element's dataset
+// and restored verbatim before edit mode resumes, so #ne-body (what gets saved)
+// only ever holds the plain <pre>text</pre> the user actually typed or pasted --
+// regardless of whether it came in as <pre class="nx-code"> (our own toolbar/MCP
+// convention) or a raw inline-styled <pre style="..."><code> from elsewhere.
+// nx-mermaid-source is excluded: that <pre> holds Mermaid syntax, not code to highlight.
+const NX_CODE_LANGS=['python','javascript','typescript','bash','json','sql','html','xml','css','cpp','java','yaml','markdown'];
+function renderNoteCode(){
+  if(typeof hljs==='undefined')return;
+  const body=document.getElementById('ne-body');
+  if(!body)return;
+  body.querySelectorAll('pre:not(.is-hl):not(.nx-mermaid-source)').forEach(block=>{
+    const raw=block.textContent||'';
+    if(!raw.trim())return;
+    block.dataset.rawSrc=raw;
+    block.dataset.rawHtml=block.innerHTML;
+    block.dataset.rawClass=block.getAttribute('class')||'';
+    block.dataset.rawStyle=block.getAttribute('style')||'';
+    let lang='',highlighted;
+    try{
+      const auto=hljs.highlightAuto(raw,NX_CODE_LANGS);
+      lang=auto.language||'';
+      highlighted=auto.value;
+    }catch(e){
+      highlighted=esc(raw);
+    }
+    const gutter=raw.split('\n').map((_,i)=>i+1).join('\n');
+    block.removeAttribute('style');
+    block.className='nx-code is-hl';
+    block.innerHTML=`<div class="nx-code-head"><span class="nx-code-lang">${esc(lang||'code')}</span><button class="nx-code-copy" onclick="copyCodeBlock(this)" title="Copy code">📋 Copy</button></div><div class="nx-code-body"><div class="nx-code-gutter">${gutter}</div><code class="hljs">${highlighted}</code></div>`;
+  });
+}
+function revertNoteCode(){
+  const body=document.getElementById('ne-body');
+  if(!body)return;
+  body.querySelectorAll('pre.is-hl').forEach(block=>{
+    block.innerHTML=block.dataset.rawHtml||'';
+    if(block.dataset.rawStyle) block.setAttribute('style',block.dataset.rawStyle);
+    block.setAttribute('class',block.dataset.rawClass||'');
+    if(!block.getAttribute('class')) block.removeAttribute('class');
+    delete block.dataset.rawSrc;
+    delete block.dataset.rawHtml;
+    delete block.dataset.rawClass;
+    delete block.dataset.rawStyle;
+  });
+}
+function copyCodeBlock(btn){
+  const block=btn.closest('pre.nx-code');
+  const text=block?.dataset.rawSrc||'';
+  navigator.clipboard.writeText(text).then(()=>showToast('📋 Code copied','info')).catch(()=>{});
+}
+
 function toggleNoteFocus(){
   noteFocusMode=!noteFocusMode;
   document.querySelector('.notes-layout')?.classList.toggle('focus-mode',noteFocusMode);
@@ -3977,13 +4510,23 @@ function toggleNoteFocus(){
 }
 function nbSearch(q){noteSearchQ=q;renderBookTree();}
 
+// ── Prev/next page navigation ────────────────────────────────────────────────
+function goAdjacentPage(dir){
+  if(!activePageId)return;
+  const flat=allPagesFlat();
+  const idx=flat.findIndex(x=>x.page.id===activePageId);
+  const target=flat[idx+dir];
+  if(idx===-1||!target)return;
+  nbOpenPage(target.book.id,target.chapter.id,target.page.id);
+}
+
 // ── Keyboard shortcut modal ───────────────────────────────────────────────────
 function openShortcutModal(){document.getElementById('shortcut-overlay').classList.add('open');}
 function closeShortcutModal(){document.getElementById('shortcut-overlay').classList.remove('open');}
 
 // ── Keyboard shortcuts ────────────────────────────────────────────────────────
 document.addEventListener('keydown',e=>{
-  const inInput=document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT';
+  const inInput=document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='TEXTAREA'||document.activeElement.tagName==='SELECT'||document.activeElement.isContentEditable;
   if(e.key==='Escape'){closePanel();closeRemModal();closeSRemModal();closeAlertOverlay();hideStatusMenu();clearSel();closeShortcutModal();closeMeetingModal();closeCalDay();closeTaskPage();}
   if((e.ctrlKey||e.metaKey)&&e.key==='k'){e.preventDefault();document.getElementById('search').focus();}
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){
@@ -3991,6 +4534,10 @@ document.addEventListener('keydown',e=>{
   }
   if(e.key==='n'&&!e.ctrlKey&&!e.metaKey&&!inInput){openPanel(null);}
   if(e.key==='?'&&!e.ctrlKey&&!e.metaKey&&!inInput){e.preventDefault();openShortcutModal();}
+  if(currentView==='notes'&&activePageId&&!inInput&&!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    if(e.key==='ArrowLeft'){e.preventDefault();goAdjacentPage(-1);}
+    if(e.key==='ArrowRight'){e.preventDefault();goAdjacentPage(1);}
+  }
 });
 </script>
 </body>

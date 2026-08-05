@@ -1,13 +1,16 @@
-from flask import Flask, render_template, request, jsonify, Response
+from flask import Flask, render_template, request, jsonify, Response, session
 import sqlite3
 import calendar
 import csv
 import io
 import json
+import secrets
+import subprocess
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
 load_dotenv()
+from notes_auth import hash_password, verify_password
 try:
     from openpyxl import Workbook
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -17,7 +20,30 @@ except ImportError:
     HAS_XLSX = False
 
 app = Flask(__name__)
-DB_PATH = os.environ.get("DB_PATH", "tasks.db")
+DB_PATH = os.environ.get("DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.db"))
+
+NOTES_UNLOCK_MINUTES = 30  # how long a correct notes password stays "unlocked" in-session
+
+
+def _load_secret_key():
+    """A stable Flask session secret so the notes-unlock session survives server restarts.
+    Falls back to a random one generated on first run and cached alongside the app."""
+    env_key = os.environ.get("FLASK_SECRET_KEY")
+    if env_key:
+        return env_key
+    key_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".flask_secret_key")
+    if os.path.exists(key_path):
+        with open(key_path, "r") as f:
+            existing = f.read().strip()
+            if existing:
+                return existing
+    key = secrets.token_hex(32)
+    with open(key_path, "w") as f:
+        f.write(key)
+    return key
+
+
+app.secret_key = _load_secret_key()
 
 
 def get_db():
@@ -176,6 +202,12 @@ def init_db():
                 updated_at TEXT NOT NULL,
                 FOREIGN KEY (chapter_id) REFERENCES note_chapters(id) ON DELETE CASCADE
             );
+            CREATE TABLE IF NOT EXISTS note_lock (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                password_hash TEXT NOT NULL,
+                salt TEXT NOT NULL,
+                updated_at TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS ai_settings (
                 id INTEGER PRIMARY KEY CHECK (id = 1),
                 base_url TEXT NOT NULL DEFAULT 'http://localhost:11434',
@@ -262,6 +294,11 @@ def init_db():
                 conn.execute(f"ALTER TABLE ai_suggestions ADD COLUMN {col} {defn}")
             except Exception:
                 pass
+        for col, defn in [("is_locked", "INTEGER NOT NULL DEFAULT 0")]:
+            try:
+                conn.execute(f"ALTER TABLE note_pages ADD COLUMN {col} {defn}")
+            except Exception:
+                pass
         conn.commit()
         _migrate_step_points_and_milestones(conn)
 
@@ -317,6 +354,26 @@ def _migrate_step_points_and_milestones(conn):
 
 def _now():
     return datetime.now().isoformat(timespec="seconds")
+
+
+def _notes_unlocked():
+    """Whether this browser session has verified the notes password recently."""
+    ts = session.get("notes_unlocked_at")
+    if not ts:
+        return False
+    try:
+        unlocked_at = datetime.fromisoformat(ts)
+    except ValueError:
+        return False
+    if datetime.now() - unlocked_at > timedelta(minutes=NOTES_UNLOCK_MINUTES):
+        session.pop("notes_unlocked_at", None)
+        return False
+    return True
+
+
+def _mark_notes_unlocked():
+    session["notes_unlocked_at"] = _now()
+    session.permanent = False  # cleared when the browser closes, not just on timeout
 
 
 def _log(conn, task_id, action, detail=None):
@@ -803,7 +860,7 @@ def remove_dependency(tid, dep_id):
 
 # ── Notes (Books › Chapters › Pages) ────────────────────────────────────────────
 
-def _enrich_notebooks(conn, book_rows):
+def _enrich_notebooks(conn, book_rows, reveal_locked=False):
     result = []
     for b in book_rows:
         bd = dict(b)
@@ -812,9 +869,15 @@ def _enrich_notebooks(conn, book_rows):
             "SELECT * FROM note_chapters WHERE book_id=? ORDER BY position, id", (bd["id"],)
         ).fetchall():
             cd = dict(c)
-            cd["pages"] = [dict(p) for p in conn.execute(
+            pages = []
+            for p in conn.execute(
                 "SELECT * FROM note_pages WHERE chapter_id=? ORDER BY position, id", (cd["id"],)
-            ).fetchall()]
+            ).fetchall():
+                pd = dict(p)
+                if pd.get("is_locked") and not reveal_locked:
+                    pd["body"] = ""  # title stays visible; content is hidden until unlocked
+                pages.append(pd)
+            cd["pages"] = pages
             chapters.append(cd)
         bd["chapters"] = chapters
         result.append(bd)
@@ -825,7 +888,7 @@ def _enrich_notebooks(conn, book_rows):
 def get_notebooks():
     with get_db() as conn:
         rows = conn.execute("SELECT * FROM note_books ORDER BY position, id").fetchall()
-        return jsonify(_enrich_notebooks(conn, rows))
+        return jsonify(_enrich_notebooks(conn, rows, reveal_locked=_notes_unlocked()))
 
 
 @app.route("/notes/books", methods=["POST"])
@@ -943,7 +1006,7 @@ def create_page(cid):
         if not chapter:
             return jsonify({"error": "Chapter not found"}), 404
         pos = conn.execute(
-            "SELECT COALESCE(MIN(position),0)-1 FROM note_pages WHERE chapter_id=?", (cid,)
+            "SELECT COALESCE(MAX(position),0)+1 FROM note_pages WHERE chapter_id=?", (cid,)
         ).fetchone()[0]
         cur = conn.execute(
             "INSERT INTO note_pages (chapter_id,title,body,color,pinned,position,created_at,updated_at)"
@@ -966,6 +1029,8 @@ def update_page(pid):
         if not p:
             return jsonify({"error": "Not found"}), 404
         pd  = dict(p)
+        if pd.get("is_locked") and not _notes_unlocked():
+            return jsonify({"error": "This note is locked. Unlock notes to edit it."}), 401
         now = _now()
         conn.execute(
             "UPDATE note_pages SET title=?,body=?,color=?,pinned=?,updated_at=? WHERE id=?",
@@ -985,11 +1050,83 @@ def update_page(pid):
 @app.route("/notes/pages/<int:pid>", methods=["DELETE"])
 def delete_page(pid):
     with get_db() as conn:
-        if not conn.execute("SELECT id FROM note_pages WHERE id=?", (pid,)).fetchone():
+        p = conn.execute("SELECT * FROM note_pages WHERE id=?", (pid,)).fetchone()
+        if not p:
             return jsonify({"error": "Not found"}), 404
+        if p["is_locked"] and not _notes_unlocked():
+            return jsonify({"error": "This note is locked. Unlock notes to delete it."}), 401
         conn.execute("DELETE FROM note_pages WHERE id=?", (pid,))
         conn.commit()
         return jsonify({"success": True})
+
+
+@app.route("/notes/pages/<int:pid>/lock", methods=["PUT"])
+def set_page_lock(pid):
+    data   = request.get_json() or {}
+    locked = bool(data.get("locked"))
+    with get_db() as conn:
+        if not conn.execute("SELECT id FROM note_lock WHERE id=1").fetchone():
+            return jsonify({"error": "Set up a notes password first"}), 400
+        if not _notes_unlocked():
+            return jsonify({"error": "Unlock notes before changing a note's lock status"}), 401
+        p = conn.execute("SELECT * FROM note_pages WHERE id=?", (pid,)).fetchone()
+        if not p:
+            return jsonify({"error": "Not found"}), 404
+        conn.execute(
+            "UPDATE note_pages SET is_locked=?, updated_at=? WHERE id=?",
+            (1 if locked else 0, _now(), pid),
+        )
+        conn.commit()
+        row = conn.execute("SELECT * FROM note_pages WHERE id=?", (pid,)).fetchone()
+        return jsonify(dict(row))
+
+
+# ── Notes password lock ──────────────────────────────────────────────────────
+
+@app.route("/notes/lock/status")
+def notes_lock_status():
+    with get_db() as conn:
+        row = conn.execute("SELECT updated_at FROM note_lock WHERE id=1").fetchone()
+    return jsonify({
+        "is_configured": bool(row),
+        "updated_at":    row["updated_at"] if row else None,
+        "unlocked":      _notes_unlocked(),
+    })
+
+
+@app.route("/notes/lock/setup", methods=["POST"])
+def notes_lock_setup():
+    password = ((request.get_json() or {}).get("password") or "").strip()
+    if len(password) < 4:
+        return jsonify({"error": "Password must be at least 4 characters"}), 400
+    with get_db() as conn:
+        if conn.execute("SELECT id FROM note_lock WHERE id=1").fetchone():
+            return jsonify({"error": "A notes password is already set. Use scripts/notes_password.py to change it."}), 409
+        pw_hash, salt = hash_password(password)
+        conn.execute(
+            "INSERT INTO note_lock (id,password_hash,salt,updated_at) VALUES (1,?,?,?)",
+            (pw_hash, salt, _now()),
+        )
+        conn.commit()
+    _mark_notes_unlocked()
+    return jsonify({"success": True}), 201
+
+
+@app.route("/notes/lock/verify", methods=["POST"])
+def notes_lock_verify():
+    password = (request.get_json() or {}).get("password") or ""
+    with get_db() as conn:
+        row = conn.execute("SELECT password_hash, salt FROM note_lock WHERE id=1").fetchone()
+    if not row or not verify_password(password, row["password_hash"], row["salt"]):
+        return jsonify({"error": "Incorrect password"}), 401
+    _mark_notes_unlocked()
+    return jsonify({"success": True})
+
+
+@app.route("/notes/lock/relock", methods=["POST"])
+def notes_lock_relock():
+    session.pop("notes_unlocked_at", None)
+    return jsonify({"success": True})
 
 
 # ── Activity log ──────────────────────────────────────────────────────────────
@@ -1615,7 +1752,61 @@ def export_xlsx():
     )
 
 
+BACKUP_SCRIPT  = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts", "backup_tasks_db.ps1")
+BACKUP_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backup_logs")
+
+
+def _today_backup_already_done():
+    """Whether the Google Drive backup already succeeded today, per its own
+    log files (scripts/backup_tasks_db.ps1 writes one per run, named for the
+    moment it started)."""
+    if not os.path.isdir(BACKUP_LOG_DIR):
+        return False
+    prefix = "backup_" + datetime.now().strftime("%Y-%m-%d") + "_"
+    for fname in os.listdir(BACKUP_LOG_DIR):
+        if not (fname.startswith(prefix) and fname.endswith(".log")):
+            continue
+        try:
+            with open(os.path.join(BACKUP_LOG_DIR, fname), encoding="utf-8", errors="ignore") as f:
+                if "Backup completed successfully" in f.read():
+                    return True
+        except OSError:
+            continue
+    return False
+
+
+def _run_missed_backup_if_needed():
+    """Catch-up for the scheduled Task Scheduler backup: if the machine was
+    off/asleep (or on battery, or otherwise blocked) at the scheduled time and
+    today's backup never ran, kick it off now that the app is actually being
+    used. Fire-and-forget so app startup isn't held up by the network copy;
+    the script's own log under backup_logs/ is the record of the outcome."""
+    if not os.path.exists(BACKUP_SCRIPT) or _today_backup_already_done():
+        return
+    try:
+        subprocess.Popen(
+            ["powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", BACKUP_SCRIPT],
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+    except OSError:
+        pass  # best-effort -- the scheduled task is still the primary mechanism
+
+
 init_db()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5001)
+    _debug_mode = True  # kept in a variable so the backup-catchup guard below and app.run() agree
+
+    # Only in the process that will actually serve requests -- with the debug
+    # reloader on, this file also runs in a separate watcher process (no
+    # WERKZEUG_RUN_MAIN set, never binds a port) that shouldn't trigger this too.
+    if not _debug_mode or os.environ.get("WERKZEUG_RUN_MAIN") == "true":
+        _run_missed_backup_if_needed()
+
+    # host="0.0.0.0" so this is reachable from outside the machine (e.g. a VM's
+    # public IP), not just 127.0.0.1. Note this dev server also has debug=True --
+    # Werkzeug's debugger allows arbitrary code execution if it's ever reached, so
+    # don't run this directly on a VM exposed to the internet. The Docker path
+    # (Dockerfile/docker-compose.yml, gunicorn, no debug mode) is what's meant for
+    # that; this app.run() is for local development only.
+    app.run(debug=_debug_mode, host="0.0.0.0", port=5001)
